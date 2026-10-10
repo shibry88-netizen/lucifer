@@ -5,326 +5,298 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="dark light" />
 <meta name="theme-color" content="#0D0C0B" />
-<meta name="description" content="晨星 · LUCIFER —— 多智能体中枢。总控 Agent 统一发号施令，调度团队协作。" />
+<meta name="description" content="LUCIFER —— 多智能体中枢。总控 Agent 统一发号施令，调度团队协作，可调用云沙盒 / 联网检索 / GitHub。" />
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="icon" href="./icon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="./icon-192.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="mobile-web-app-capable" content="yes" />
-<title>晨星 · LUCIFER</title>
+<title>LUCIFER</title>
 <style>
 /* =======================================================================
- * 晨星 · LUCIFER  ——  鎏金黑设计系统
- * 依据「晨星 UI 设计规范 v1.0」实现：黑是底、金是点、灰是骨，金占比 < 5%
+ * LUCIFER · 多智能体中枢  ——  液态玻璃设计系统（v2）
+ * 配色回归第一版：极光背景 + 靛紫玻璃；App 图标另用鎏金+黑
+ * 原则：只动画 transform / opacity / filter；玻璃层绝不参与过渡
  * ===================================================================== */
 
 *{box-sizing:border-box}
 
-/* ---------------- 用户可调旋钮 ---------------- */
 :root{
-  --accent-h:40; --accent-s:50%; --accent-l:58%;
+  --accent-h:248; --accent-s:100%; --accent-l:71%;
   --radius-scale:1; --font-scale:1;
-  --glass-blur:20px; --glass-alpha:.045;
+  --glass-blur:22px;
 
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
-  --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px;
+  --sp-5:20px; --sp-6:24px; --sp-8:32px;
 
-  --r-xs:calc(6px * var(--radius-scale));
-  --r-sm:calc(10px * var(--radius-scale));
-  --r-md:calc(14px * var(--radius-scale));
-  --r-lg:calc(18px * var(--radius-scale));
-  --r-xl:calc(24px * var(--radius-scale));
+  --r-xs:calc(7px * var(--radius-scale));
+  --r-sm:calc(11px * var(--radius-scale));
+  --r-md:calc(15px * var(--radius-scale));
+  --r-lg:calc(20px * var(--radius-scale));
+  --r-xl:calc(26px * var(--radius-scale));
   --r-full:999px;
 
-  --dur-quick:120ms; --dur-base:180ms; --dur-slow:260ms; --dur-enter:320ms;
+  --dur-quick:120ms; --dur-base:190ms; --dur-slow:280ms;
   --ease-out:cubic-bezier(.22,1,.36,1);
   --ease-in-out:cubic-bezier(.40,0,.20,1);
-  --ease-spring:cubic-bezier(.34,1.30,.64,1);
+  --ease-spring:cubic-bezier(.34,1.28,.64,1);
 
-  --font-cn:"PingFang SC","HarmonyOS Sans SC","MiSans","Source Han Sans SC","Noto Sans SC","Microsoft YaHei UI",system-ui,sans-serif;
-  --font-brand:"Cormorant Garamond","Source Han Serif SC","Noto Serif SC","Songti SC",Georgia,serif;
-  --font-mono:"JetBrains Mono","Cascadia Code","SF Mono",Consolas,MiSans,ui-monospace,monospace;
+  --font-cn:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","MiSans","Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SFMono-Regular","JetBrains Mono",Consolas,Menlo,monospace;
 
-  --fs-h1:calc(28px * var(--font-scale)); --lh-h1:1.25; --ls-h1:-.02em;
-  --fs-h2:calc(22px * var(--font-scale)); --lh-h2:1.30; --ls-h2:-.015em;
-  --fs-h3:calc(18px * var(--font-scale)); --lh-h3:1.35; --ls-h3:-.01em;
-  --fs-h4:calc(16px * var(--font-scale)); --lh-h4:1.40; --ls-h4:-.005em;
-  --fs-h5:calc(15px * var(--font-scale)); --lh-h5:1.45;
-  --fs-h6:calc(14px * var(--font-scale)); --lh-h6:1.50;
-  --fs-body:calc(15px * var(--font-scale)); --lh-body:1.75;
-  --fs-ui:calc(14px * var(--font-scale)); --lh-ui:1.55;
-  --fs-cap:calc(12px * var(--font-scale)); --lh-cap:1.50; --ls-cap:.02em;
-  --fs-micro:calc(11px * var(--font-scale)); --lh-micro:1.40; --ls-micro:.04em;
-  --fs-code:calc(13px * var(--font-scale)); --lh-code:1.65;
-  --fs-btn:calc(14px * var(--font-scale)); --fw-btn:600; --ls-btn:.02em;
-  --fs-tag:calc(11px * var(--font-scale)); --ls-tag:.06em;
+  --fs-h1:calc(26px * var(--font-scale));
+  --fs-h2:calc(21px * var(--font-scale));
+  --fs-h3:calc(17px * var(--font-scale));
+  --fs-h4:calc(15.5px * var(--font-scale));
+  --fs-h5:calc(14.5px * var(--font-scale));
+  --fs-h6:calc(13.5px * var(--font-scale));
+  --fs-body:calc(14px * var(--font-scale));
+  --fs-ui:calc(13px * var(--font-scale));
+  --fs-cap:calc(12px * var(--font-scale));
+  --fs-micro:calc(11px * var(--font-scale));
+  --fs-code:calc(12.5px * var(--font-scale));
 }
 
-/* ---------------- 暗金（默认） ---------------- */
+/* ---------------- 暗色（默认，第一版配色） ---------------- */
 [data-theme="dark"]{
-  --bg-0:#0E0D0B; --bg-1:#181613; --bg-2:#221F1B; --bg-3:#2C2823;
-  --glass-bg:rgba(255,244,217,var(--glass-alpha));
-  --glass-filter:blur(var(--glass-blur)) saturate(140%);
-  --line-subtle:rgba(233,216,178,.10);
-  --line-default:rgba(233,216,178,.17);
-  --line-strong:rgba(217,190,132,.38);
-  --line-gold:rgba(217,190,132,.45);
-  --text-1:#F6F2E9; --text-2:#C0B8AA; --text-3:#8D8475; --text-on-gold:#1A1408;
-  --gold-100:#F0E2BC; --gold-200:#E2CC96; --gold-300:#D9BE84; --gold-400:#C9A45C;
-  --gold-500:#B9934A; --gold-600:#A8823D; --gold-700:#8C6E33; --gold-800:#5C4922;
-  --accent:var(--gold-400); --accent-hover:var(--gold-300); --accent-active:var(--gold-600);
-  --gold-grad:linear-gradient(135deg,#8C6E33 0%,#C9A45C 26%,#E7D4A4 50%,#C9A45C 74%,#8C6E33 100%);
-  --gold-grad-matte:linear-gradient(135deg,#A8823D 0%,#C9A45C 46%,#B9934A 100%);
-  --success:#6FB68A; --success-bg:rgba(111,182,138,.12);
-  --warning:#E0A24A; --warning-bg:rgba(224,162,74,.12);
-  --danger:#E06B5E;  --danger-bg:rgba(224,107,94,.12);
-  --info:#7FA6D9;    --info-bg:rgba(127,166,217,.12);
-  --shadow-sm:0 1px 2px rgba(0,0,0,.40);
-  --shadow-md:0 4px 12px rgba(0,0,0,.36),0 1px 2px rgba(0,0,0,.32);
-  --shadow-lg:0 12px 32px rgba(0,0,0,.44),0 2px 8px rgba(0,0,0,.30);
-  --shadow-gold:0 0 0 1px rgba(201,164,92,.22),0 8px 28px rgba(201,164,92,.10);
-  --glow-gold:0 0 20px rgba(201,164,92,.18);
-  --scrim:rgba(8,7,5,.62);
-  --code-bg:#0A0908;
+  --bg-0:#08090f; --bg-1:#0e1018; --bg-2:#151824; --bg-3:#1e2231;
+  --glass-bg:rgba(255,255,255,.055);
+  --glass-filter:blur(var(--glass-blur)) saturate(180%);
+  --glass-line:rgba(255,255,255,.11);
+  --line-subtle:rgba(255,255,255,.065);
+  --line-default:rgba(255,255,255,.115);
+  --line-strong:rgba(139,147,255,.42);
+  --text-1:#ECEEF8; --text-2:#A9B1C8; --text-3:#737D97;
+  --brand-100:#D6D9FF; --brand-200:#BFC3FF; --brand-300:#A5AAFF; --brand-400:#8B93FF;
+  --brand-500:#7C6CFF; --brand-600:#6353E8; --brand-700:#4B3EB8;
+  --accent:#7C6CFF; --accent-2:#4D8DFF; --accent-soft:rgba(124,108,255,.16);
+  --brand-grad:linear-gradient(135deg,#6353E8 0%,#8B93FF 30%,#A5AAFF 52%,#4D8DFF 100%);
+  --brand-grad-matte:linear-gradient(140deg,#6E5FFF,#5B7BFF);
+  --user-grad:linear-gradient(140deg,rgba(139,147,255,.30),rgba(99,210,255,.14));
+  --success:#35D07F; --success-bg:rgba(53,208,127,.13);
+  --warning:#FFB020; --warning-bg:rgba(255,176,32,.13);
+  --danger:#FF5D5D;  --danger-bg:rgba(255,93,93,.13);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow-md:0 6px 18px rgba(0,0,0,.42);
+  --shadow-lg:0 18px 48px -12px rgba(0,0,0,.62);
+  --shadow-brand:0 10px 28px -10px rgba(124,108,255,.85);
+  --scrim:rgba(6,7,12,.62);
+  --code-bg:#0a0c14;
 }
-/* ---------------- 亮白（白金） ---------------- */
+
+/* ---------------- 亮色 ---------------- */
 [data-theme="light"]{
-  --bg-0:#FAF7F2; --bg-1:#FFFFFF; --bg-2:#F4F0E8; --bg-3:#ECE7DC;
+  --bg-0:#F4F5FA; --bg-1:#FFFFFF; --bg-2:#F7F8FC; --bg-3:#ECEEF6;
   --glass-bg:rgba(255,255,255,.62);
   --glass-filter:blur(var(--glass-blur)) saturate(160%);
-  --line-subtle:rgba(28,22,10,.06);
-  --line-default:rgba(28,22,10,.10);
-  --line-strong:rgba(140,110,51,.28);
-  --line-gold:rgba(140,110,51,.45);
-  --text-1:#1A1712; --text-2:#6A6255; --text-3:#9C9384; --text-on-gold:#FFF9EC;
-  --gold-100:#E7D4A4; --gold-200:#D9BE84; --gold-300:#C9A45C; --gold-400:#B9934A;
-  --gold-500:#A8823D; --gold-600:#8C6E33; --gold-700:#75592A; --gold-800:#5C4922;
-  --accent:var(--gold-500); --accent-hover:var(--gold-600); --accent-active:var(--gold-700);
-  --gold-grad:linear-gradient(135deg,#8C6E33 0%,#A8823D 30%,#C9A45C 55%,#A8823D 78%,#8C6E33 100%);
-  --gold-grad-matte:linear-gradient(135deg,#A8823D 0%,#BE9650 46%,#A8823D 100%);
-  --success:#2F7A55; --success-bg:rgba(47,122,85,.10);
-  --warning:#B26A16; --warning-bg:rgba(178,106,22,.10);
-  --danger:#C23B32;  --danger-bg:rgba(194,59,50,.10);
-  --info:#2F5FA8;    --info-bg:rgba(47,95,168,.10);
-  --shadow-sm:0 1px 2px rgba(28,22,10,.06);
-  --shadow-md:0 4px 12px rgba(28,22,10,.08),0 1px 2px rgba(28,22,10,.05);
-  --shadow-lg:0 12px 32px rgba(28,22,10,.12),0 2px 8px rgba(28,22,10,.06);
-  --shadow-gold:0 0 0 1px rgba(140,110,51,.18),0 8px 24px rgba(140,110,51,.12);
-  --glow-gold:0 0 18px rgba(168,130,61,.14);
-  --scrim:rgba(250,247,242,.72);
-  --code-bg:#2A261F;
+  --glass-line:rgba(20,24,44,.08);
+  --line-subtle:rgba(20,24,44,.07);
+  --line-default:rgba(20,24,44,.11);
+  --line-strong:rgba(99,83,232,.34);
+  --text-1:#141826; --text-2:#525C78; --text-3:#8B94AC;
+  --brand-100:#3B2FA8; --brand-200:#4B3EB8; --brand-300:#5A4DD0; --brand-400:#6353E8;
+  --brand-500:#5B4BE0; --brand-600:#4B3EB8; --brand-700:#3B2FA8;
+  --accent:#5B4BE0; --accent-2:#2E6BE6; --accent-soft:rgba(99,83,232,.12);
+  --brand-grad:linear-gradient(135deg,#4B3EB8 0%,#6353E8 40%,#8B93FF 100%);
+  --brand-grad-matte:linear-gradient(140deg,#6353E8,#4A6BE6);
+  --user-grad:linear-gradient(140deg,rgba(99,83,232,.16),rgba(46,107,230,.10));
+  --success:#12915A; --success-bg:rgba(18,145,90,.10);
+  --warning:#B26A00; --warning-bg:rgba(178,106,0,.10);
+  --danger:#C0392B;  --danger-bg:rgba(192,57,43,.10);
+  --shadow-sm:0 1px 2px rgba(20,24,44,.07);
+  --shadow-md:0 6px 18px rgba(20,24,44,.09);
+  --shadow-lg:0 18px 44px -14px rgba(20,24,44,.20);
+  --shadow-brand:0 10px 26px -12px rgba(99,83,232,.6);
+  --scrim:rgba(238,240,248,.72);
+  --code-bg:#1B2030;
 }
-/* 自定义主色（--accent-h/s/l 由设置页写入） */
+
+/* 自定义主色 */
 html[data-custom-accent="1"]{
-  --gold-400:hsl(var(--accent-h) var(--accent-s) var(--accent-l));
-  --gold-300:hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 9%));
-  --gold-500:hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 7%));
-  --gold-600:hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 13%));
-  --gold-700:hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 20%));
-  --accent:var(--gold-400); --accent-hover:var(--gold-300); --accent-active:var(--gold-600);
-  --gold-grad:linear-gradient(135deg,
-    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 20%)) 0%,
-    hsl(var(--accent-h) var(--accent-s) var(--accent-l)) 26%,
-    hsl(var(--accent-h) calc(var(--accent-s) + 14%) calc(var(--accent-l) + 20%)) 50%,
-    hsl(var(--accent-h) var(--accent-s) var(--accent-l)) 74%,
-    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 20%)) 100%);
-  --gold-grad-matte:linear-gradient(135deg,
-    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 13%)) 0%,
-    hsl(var(--accent-h) var(--accent-s) var(--accent-l)) 46%,
-    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 7%)) 100%);
+  --brand-400:hsl(var(--accent-h) var(--accent-s) var(--accent-l));
+  --brand-300:hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 9%));
+  --brand-500:hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 8%));
+  --brand-600:hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 16%));
+  --accent:var(--brand-400);
+  --brand-grad:linear-gradient(135deg,
+    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 22%)) 0%,
+    hsl(var(--accent-h) var(--accent-s) var(--accent-l)) 34%,
+    hsl(var(--accent-h) calc(var(--accent-s) - 25%) calc(var(--accent-l) + 12%)) 62%,
+    hsl(calc(var(--accent-h) + 55) var(--accent-s) var(--accent-l)) 100%);
+  --brand-grad-matte:linear-gradient(140deg,
+    hsl(var(--accent-h) var(--accent-s) var(--accent-l)),
+    hsl(calc(var(--accent-h) + 40) var(--accent-s) calc(var(--accent-l) - 4%)));
+  --user-grad:linear-gradient(140deg,
+    hsl(var(--accent-h) var(--accent-s) var(--accent-l) / .30),
+    hsl(calc(var(--accent-h) + 70) var(--accent-s) var(--accent-l) / .14));
+  --accent-soft:hsl(var(--accent-h) var(--accent-s) var(--accent-l) / .16);
+  --line-strong:hsl(var(--accent-h) var(--accent-s) var(--accent-l) / .42);
 }
 
 /* ---------------- 基础 ---------------- */
 html,body{height:100%;margin:0}
 body{
   background:var(--bg-0); color:var(--text-1); font-family:var(--font-cn);
-  font-size:var(--fs-ui); line-height:var(--lh-ui);
+  font-size:var(--fs-ui); line-height:1.65;
   font-variant-numeric:tabular-nums; overflow:hidden;
-  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-  transition:background var(--dur-slow) var(--ease-out), color var(--dur-slow) var(--ease-out);
+  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+  transition:background var(--dur-slow) var(--ease-out),color var(--dur-slow) var(--ease-out);
 }
 button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:0;cursor:pointer}
 input,textarea,select{
   font-family:inherit;font-size:var(--fs-ui);color:var(--text-1);
   background:var(--bg-2);border:1px solid var(--line-default);
   border-radius:var(--r-sm);padding:9px 12px;outline:none;width:100%;
-  transition:border-color var(--dur-base) var(--ease-out),box-shadow var(--dur-base) var(--ease-out);
+  transition:border-color var(--dur-base) var(--ease-out),box-shadow var(--dur-base) var(--ease-out),background var(--dur-base) var(--ease-out);
 }
-input:focus,textarea:focus,select:focus{
-  border-color:var(--line-gold);box-shadow:0 0 0 3px rgba(201,164,92,.14);
-}
+input:focus,textarea:focus,select:focus{border-color:var(--line-strong);box-shadow:0 0 0 3px var(--accent-soft)}
 input::placeholder,textarea::placeholder{color:var(--text-3)}
 textarea{resize:vertical;line-height:1.7}
 select option{background:var(--bg-2);color:var(--text-1)}
-a{color:var(--accent);text-decoration:none}
+a{color:var(--accent-2);text-decoration:none}
 a:hover{text-decoration:underline}
-code{font-family:var(--font-mono);font-variant-ligatures:none}
+code{font-family:var(--font-mono)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:var(--line-default);border-radius:10px;border:3px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-thumb:hover{background:var(--line-strong);background-clip:content-box}
-::-webkit-scrollbar-track{background:transparent}
-::selection{background:rgba(201,164,92,.30)}
+::selection{background:rgba(124,108,255,.34)}
 
-/* 背景薄光（可关） */
+/* ---------------- 极光背景（第一版四色） ---------------- */
 .aurora{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
-.aurora i{position:absolute;display:block;border-radius:50%;filter:blur(90px);opacity:.5;will-change:transform;animation:drift 40s var(--ease-out) infinite alternate}
-.aurora i:nth-child(1){width:46vw;height:46vw;left:-10vw;top:-14vw;background:radial-gradient(circle at 35% 35%,rgba(201,164,92,.42),transparent 68%)}
-.aurora i:nth-child(2){width:40vw;height:40vw;right:-8vw;bottom:-16vw;background:radial-gradient(circle at 50% 50%,rgba(140,110,51,.34),transparent 70%);animation-duration:52s;animation-delay:-12s}
-@keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(3vw,2vw,0) scale(1.12)}100%{transform:translate3d(-2vw,4vw,0) scale(1.04)}}
+.aurora i{position:absolute;display:block;border-radius:50%;filter:blur(80px);will-change:transform;animation:drift 34s var(--ease-out) infinite alternate}
+.aurora i:nth-child(1){width:52vw;height:52vw;left:-10vw;top:-14vw;opacity:.60;background:radial-gradient(circle at 32% 32%,#5b4bff,#2a1d7a 68%,transparent)}
+.aurora i:nth-child(2){width:46vw;height:46vw;right:-8vw;top:-8vw;opacity:.55;background:radial-gradient(circle at 58% 42%,#1ea7ff,#0b3f77 68%,transparent);animation-duration:42s;animation-delay:-6s}
+.aurora i:nth-child(3){width:44vw;height:44vw;left:16vw;bottom:-20vw;opacity:.42;background:radial-gradient(circle at 40% 58%,#ff4fd8,#5a1550 68%,transparent);animation-duration:52s;animation-delay:-16s}
+.aurora i:nth-child(4){width:38vw;height:38vw;right:4vw;bottom:-16vw;opacity:.38;background:radial-gradient(circle at 50% 50%,#00e0c0,#054c48 68%,transparent);animation-duration:38s;animation-delay:-24s}
+@keyframes drift{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(3.5vw,2.5vw,0) scale(1.12)}100%{transform:translate3d(-2.5vw,4vw,0) scale(1.05)}}
 body.no-aurora .aurora{display:none}
-[data-theme="light"] .aurora i{opacity:.34}
-.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.03;mix-blend-mode:overlay;
+[data-theme="light"] .aurora{opacity:.42}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.028;mix-blend-mode:overlay;
   background-image:radial-gradient(rgba(255,255,255,.9) .5px,transparent .5px);background-size:3px 3px}
 
-/* ---------------- 玻璃面 ---------------- */
+/* ---------------- 玻璃 ---------------- */
 .glass{
-  position:relative;
-  background:var(--glass-bg);
-  -webkit-backdrop-filter:var(--glass-filter);
-  backdrop-filter:var(--glass-filter);
-  border:1px solid var(--line-default);
+  position:relative;background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-filter);backdrop-filter:var(--glass-filter);
+  border:1px solid var(--glass-line);
+  box-shadow:var(--shadow-md),inset 0 1px 0 rgba(255,255,255,.16);
 }
+html[data-theme="light"] .glass{box-shadow:var(--shadow-md),inset 0 1px 0 rgba(255,255,255,.9)}
 .glass::before{
   content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-  background:radial-gradient(130% 90% at 10% -20%,rgba(255,246,224,.10),transparent 60%);
+  background:radial-gradient(130% 90% at 8% -20%,rgba(255,255,255,.14),transparent 58%);
 }
 html[data-glass="0"] .glass{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--bg-1)}
 html[data-glass="0"] .glass::before{display:none}
 
-/* ---------------- 金字工具类 ---------------- */
-.gold-text{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-@supports not ((-webkit-background-clip:text) or (background-clip:text)){.gold-text{color:var(--accent);background:none}}
-.gold-edge{
-  border:1px solid transparent;
-  background:linear-gradient(var(--bg-2),var(--bg-2)) padding-box,
-             linear-gradient(135deg,rgba(217,190,132,.42) 0%,rgba(201,164,92,.10) 42%,rgba(217,190,132,.32) 100%) border-box;
-}
-[data-theme="light"] .gold-edge{
-  background:linear-gradient(var(--bg-2),var(--bg-2)) padding-box,
-             linear-gradient(135deg,rgba(140,110,51,.34) 0%,rgba(140,110,51,.08) 42%,rgba(140,110,51,.26) 100%) border-box;
-}
+.brand-text{background:var(--brand-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+@supports not ((-webkit-background-clip:text) or (background-clip:text)){.brand-text{color:var(--accent);background:none}}
+.gold-text{background:var(--brand-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* ---------------- 布局 ---------------- */
 .app{position:relative;z-index:2;display:flex;height:100vh;overflow:hidden}
 .side{
-  width:264px;min-width:264px;background:var(--bg-1);
-  border-right:1px solid var(--line-subtle);display:flex;flex-direction:column;
-  transition:margin-left 220ms var(--ease-in-out);contain:layout;
+  width:268px;min-width:268px;background:var(--bg-1);border-right:1px solid var(--line-subtle);
+  display:flex;flex-direction:column;transition:margin-left 240ms var(--ease-in-out);contain:layout;
 }
-.app.collapsed .side{margin-left:-264px}
-.main{flex:1;display:flex;flex-direction:column;min-width:0;background:transparent}
+.app.collapsed .side{margin-left:-268px}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
 .side-mask{display:none}
 .tabbar{display:none}
 
 /* ---------------- 侧栏 ---------------- */
-.side-head{padding:var(--sp-3) var(--sp-3) var(--sp-2);display:flex;align-items:center;gap:10px}
-.logo{
-  width:34px;height:34px;border-radius:var(--r-xs);flex:0 0 auto;
-  display:grid;place-items:center;
-  background:linear-gradient(140deg,rgba(201,164,92,.16),rgba(201,164,92,.05));
-  border:1px solid var(--line-strong);
-}
-.logo svg{width:19px;height:19px;display:block;animation:starGlow 6s linear infinite}
-@keyframes starGlow{0%,100%{opacity:.62}50%{opacity:.92}}
-.brand b{display:block;font-family:var(--font-brand);font-size:17px;font-weight:600;letter-spacing:.14em;line-height:1.2}
-.brand span{display:block;font-size:var(--fs-micro);color:var(--text-3);letter-spacing:.22em;text-transform:uppercase;margin-top:2px;font-family:var(--font-mono)}
-.side-search{padding:0 var(--sp-3) var(--sp-2)}
-.side-search input{height:34px;padding:0 10px 0 12px;font-size:var(--fs-cap);border-radius:var(--r-sm);background:var(--bg-0);border-color:var(--line-subtle)}
-.side-scroll{flex:1;overflow-y:auto;padding-bottom:var(--sp-2)}
-.side-label{
-  padding:10px var(--sp-3) 4px;font-size:var(--fs-tag);color:var(--text-3);
-  letter-spacing:var(--ls-tag);text-transform:uppercase;
-  display:flex;align-items:center;justify-content:space-between;
-}
-.side-label button{font-size:16px;line-height:1;color:var(--text-3);padding:0 6px;border-radius:var(--r-xs);transition:color var(--dur-quick)}
+.side-head{padding:14px 14px 10px;display:flex;align-items:center;gap:11px}
+.logo{width:34px;height:34px;border-radius:var(--r-sm);flex:0 0 auto;display:grid;place-items:center;
+  background:var(--brand-grad);box-shadow:var(--shadow-brand),inset 0 1px 0 rgba(255,255,255,.45)}
+.logo svg{width:18px;height:18px;display:block}
+.logo.gold{background:linear-gradient(140deg,#8C6E33,#E7D4A4 50%,#A8823D);box-shadow:0 8px 22px -8px rgba(201,164,92,.8),inset 0 1px 0 rgba(255,246,224,.5)}
+.brand b{display:block;font-size:15px;font-weight:650;letter-spacing:.06em;line-height:1.2}
+.brand span{display:block;font-size:var(--fs-micro);color:var(--text-3);letter-spacing:.16em;text-transform:uppercase;margin-top:3px;font-family:var(--font-mono)}
+.side-search{padding:0 14px 10px}
+.side-search input{height:34px;padding:0 12px;font-size:var(--fs-cap);border-radius:var(--r-sm);background:var(--bg-0);border-color:var(--line-subtle)}
+.side-scroll{flex:1;overflow-y:auto;padding-bottom:8px;overscroll-behavior:contain}
+.side-label{padding:12px 16px 5px;font-size:10.5px;color:var(--text-3);letter-spacing:.1em;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:space-between}
+.side-label button{font-size:15px;line-height:1;color:var(--text-3);padding:0 6px;border-radius:var(--r-xs);transition:color var(--dur-quick)}
 .side-label button:hover{color:var(--accent)}
 .agent-item,.topic-item{
-  display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;margin:1px var(--sp-2);
-  border-radius:var(--r-xs);cursor:pointer;position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:10px;height:42px;padding:0 10px;margin:1px 8px;
+  border-radius:var(--r-sm);cursor:pointer;position:relative;overflow:hidden;
   transition:background var(--dur-base) var(--ease-out),color var(--dur-base) var(--ease-out);
 }
-.agent-item:hover,.topic-item:hover{background:rgba(201,164,92,.08)}
-.agent-item.on,.topic-item.on{background:rgba(201,164,92,.12);box-shadow:inset 2px 0 0 var(--accent)}
-.agent-item.on .nm,.topic-item.on .tt{color:var(--accent)}
+.agent-item:hover,.topic-item:hover{background:var(--accent-soft)}
+.agent-item.on,.topic-item.on{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+.agent-item.on .nm,.topic-item.on .tt{color:var(--brand-200)}
 .agent-item .meta,.topic-item .meta{min-width:0;flex:1}
 .agent-item .nm,.topic-item .tt{font-size:var(--fs-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.agent-item .rl,.topic-item .rl{font-size:var(--fs-micro);color:var(--text-3);font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topic-item{height:34px}
+.agent-item .rl,.topic-item .rl{font-size:10.5px;color:var(--text-3);font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topic-item{height:38px}
 .topic-item .tt{font-size:var(--fs-cap)}
-.topic-item .x{opacity:0;font-size:14px;color:var(--text-3);padding:0 2px;transition:opacity var(--dur-quick)}
+.topic-item .x{opacity:0;font-size:13px;color:var(--text-3);padding:0 3px;transition:opacity var(--dur-quick),color var(--dur-quick)}
 .topic-item:hover .x{opacity:1}
 .topic-item .x:hover{color:var(--danger)}
-.side-foot{border-top:1px solid var(--line-subtle);padding:var(--sp-2);display:flex;flex-direction:column;gap:2px}
-.side-foot button{
-  width:100%;display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;
-  border-radius:var(--r-xs);font-size:var(--fs-ui);color:var(--text-2);
-  transition:background var(--dur-base) var(--ease-out),color var(--dur-base) var(--ease-out);
-}
-.side-foot button:hover{background:rgba(201,164,92,.08);color:var(--text-1)}
-.side-foot .ico{width:18px;text-align:center;font-size:15px}
+.side-foot{border-top:1px solid var(--line-subtle);padding:8px;display:flex;flex-direction:column;gap:2px}
+.side-foot button{width:100%;display:flex;align-items:center;gap:10px;height:42px;padding:0 12px;
+  border-radius:var(--r-sm);font-size:var(--fs-ui);color:var(--text-2);
+  transition:background var(--dur-base) var(--ease-out),color var(--dur-base) var(--ease-out)}
+.side-foot button:hover{background:var(--accent-soft);color:var(--text-1)}
+.side-foot .ico{width:18px;text-align:center;font-size:15px;opacity:.9}
+.side-foot .badge{margin-left:auto;font-size:10px;font-family:var(--font-mono);color:var(--text-3)}
 
 /* ---------------- 头像 ---------------- */
-.av{
-  width:28px;height:28px;border-radius:50%;flex:0 0 auto;object-fit:cover;display:grid;place-items:center;
-  font-size:13px;background:linear-gradient(150deg,#3A342B,#2B3238);
-  border:1.5px solid rgba(217,190,132,.5);overflow:hidden;
-}
-.av.lg{width:34px;height:34px;font-size:15px}
-.av.sm{width:22px;height:22px;font-size:11px;border-width:1px}
-.av.xs{width:18px;height:18px;font-size:9px;border-width:1px}
-.av.main-ring{box-shadow:0 0 0 2px rgba(201,164,92,.22)}
+.av{width:28px;height:28px;border-radius:9px;flex:0 0 auto;object-fit:cover;display:grid;place-items:center;
+  font-size:14px;background:linear-gradient(150deg,rgba(255,255,255,.14),rgba(255,255,255,.05));
+  border:1px solid var(--line-default);overflow:hidden}
+html[data-theme="light"] .av{background:linear-gradient(150deg,#E8EAF6,#F5F6FC)}
+.av.lg{width:34px;height:34px;font-size:16px;border-radius:11px}
+.av.sm{width:22px;height:22px;font-size:11px;border-radius:7px}
+.av.xs{width:18px;height:18px;font-size:9px;border-radius:6px}
+.av.ring{box-shadow:0 0 0 2px var(--accent-soft),inset 0 1px 0 rgba(255,255,255,.3)}
+.av.main-ring{box-shadow:0 0 0 2px rgba(124,108,255,.45)}
 
 /* ---------------- 顶栏 ---------------- */
 .top{
-  height:56px;min-height:56px;display:flex;align-items:center;gap:10px;
-  padding:0 var(--sp-4);background:var(--glass-bg);
-  -webkit-backdrop-filter:var(--glass-filter);backdrop-filter:var(--glass-filter);
+  height:56px;min-height:56px;display:flex;align-items:center;gap:10px;padding:0 16px;
+  background:var(--glass-bg);-webkit-backdrop-filter:var(--glass-filter);backdrop-filter:var(--glass-filter);
   border-bottom:1px solid var(--line-subtle);position:relative;z-index:20;
 }
 html[data-glass="0"] .top{backdrop-filter:none;background:var(--bg-1)}
-.icon-btn{
-  width:32px;height:32px;border-radius:var(--r-xs);display:grid;place-items:center;
-  font-size:17px;color:var(--text-2);flex:0 0 auto;
-  transition:background var(--dur-base) var(--ease-out),color var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out);
-}
-.icon-btn:hover{background:rgba(201,164,92,.08);color:var(--text-1);transform:translateY(-1px)}
-.icon-btn:active{transform:translateY(0) scale(.96)}
-.burger i{display:block;width:16px;height:1.5px;border-radius:2px;background:currentColor;margin:2.5px 0;transition:width var(--dur-base) var(--ease-out)}
-.burger:hover i:nth-child(1),.burger:hover i:nth-child(3){width:11px}
+.icon-btn{width:32px;height:32px;border-radius:var(--r-sm);display:grid;place-items:center;
+  font-size:16px;color:var(--text-2);flex:0 0 auto;
+  transition:background var(--dur-base) var(--ease-out),color var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out)}
+.icon-btn:hover{background:var(--accent-soft);color:var(--text-1);transform:translateY(-1px)}
+.icon-btn:active{transform:translateY(0) scale(.95)}
+.icon-btn.on{background:var(--accent-soft);color:var(--accent)}
+.burger i{display:block;width:15px;height:1.5px;border-radius:2px;background:currentColor;margin:2.5px 0;transition:width var(--dur-base) var(--ease-out)}
+.burger:hover i:nth-child(1),.burger:hover i:nth-child(3){width:10px}
 .top-info{min-width:0;flex:1}
 .top-info .t1{font-size:var(--fs-ui);display:flex;align-items:center;gap:7px}
-.top-info .t2{font-size:var(--fs-micro);color:var(--text-3);font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-info .t1 b{font-weight:600}
+.top-info .t2{font-size:11px;color:var(--text-3);font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spacer{flex:1}
-.top-actions{display:flex;gap:8px;align-items:center}
+.top-actions{display:flex;gap:6px;align-items:center}
 
 /* ---------------- 按钮 ---------------- */
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  height:36px;padding:0 16px;border-radius:var(--r-sm);
-  font-size:var(--fs-btn);font-weight:var(--fw-btn);letter-spacing:var(--ls-btn);
-  color:var(--text-1);white-space:nowrap;
-  background:rgba(201,164,92,.06);border:1px solid rgba(201,164,92,.18);
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;
+  border-radius:var(--r-sm);font-size:var(--fs-ui);font-weight:500;white-space:nowrap;color:var(--text-1);
+  background:var(--bg-3);border:1px solid var(--line-default);
   transition:background var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out),
-             transform var(--dur-base) var(--ease-out),filter var(--dur-base) var(--ease-out);
-}
-.btn:hover{background:rgba(201,164,92,.10);border-color:var(--line-strong);transform:translateY(-1px)}
-.btn:active{transform:translateY(0);background:rgba(201,164,92,.14)}
-.btn.pri{
-  color:var(--text-on-gold);border-color:rgba(233,216,178,.38);
-  background:var(--gold-grad-matte);
-  box-shadow:inset 0 1px 0 rgba(255,246,224,.42),inset 0 -1px 0 rgba(90,66,22,.45),0 6px 18px rgba(201,164,92,.18);
-}
-.btn.pri:hover{filter:brightness(1.06)}
-.btn.pri:active{filter:brightness(.95);box-shadow:inset 0 2px 4px rgba(60,42,10,.35)}
-.btn.danger{color:var(--danger);background:var(--danger-bg);border-color:rgba(224,107,94,.3)}
-.btn.danger:hover{background:rgba(224,107,94,.18)}
+             transform var(--dur-base) var(--ease-out),filter var(--dur-base) var(--ease-out),box-shadow var(--dur-base)}
+.btn:hover{background:var(--bg-2);border-color:var(--line-strong);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.pri{color:#fff;background:var(--brand-grad-matte);border-color:transparent;
+  box-shadow:var(--shadow-brand),inset 0 1px 0 rgba(255,255,255,.28)}
+.btn.pri:hover{filter:brightness(1.08);background:var(--brand-grad-matte)}
+.btn.danger{color:var(--danger);background:var(--danger-bg);border-color:transparent}
+.btn.danger:hover{background:var(--danger-bg);border-color:var(--danger);filter:brightness(1.05)}
+.btn.ghost{background:transparent;border-color:var(--line-default)}
 .btn.sm{height:28px;padding:0 10px;font-size:var(--fs-cap);border-radius:var(--r-xs)}
 .btn:disabled{opacity:.42;pointer-events:none}
 .btn.fix{flex:0 0 auto}
-.btn.full{width:100%}
-.btn.block{width:100%;margin-bottom:var(--sp-2)}
+.btn.full,.btn.block{width:100%}
+.btn.block{margin-bottom:8px}
 
 /* ---------------- 通用 ---------------- */
 .body{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
@@ -332,133 +304,129 @@ html[data-glass="0"] .top{backdrop-filter:none;background:var(--bg-1)}
 .kv{font-family:var(--font-mono);font-size:var(--fs-micro);color:var(--text-3)}
 .kv.pad{padding:6px 14px}
 .dim{color:var(--text-3)}
-.mt{margin-top:var(--sp-3)}
-.tag{
-  display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-full);
-  font-size:var(--fs-tag);letter-spacing:var(--ls-tag);color:var(--text-3);
-  background:rgba(201,164,92,.07);border:1px solid var(--line-default);white-space:nowrap;
-}
-.tag.main{color:var(--accent);border-color:var(--line-strong);background:rgba(201,164,92,.12)}
-.tag.ok{color:var(--success);border-color:rgba(111,182,138,.3);background:var(--success-bg)}
-.tag.warn{color:var(--warning);border-color:rgba(224,162,74,.3);background:var(--warning-bg)}
-.tag.err{color:var(--danger);border-color:rgba(224,107,94,.3);background:var(--danger-bg)}
-.spin{width:12px;height:12px;border:1.5px solid var(--line-strong);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;display:inline-block;vertical-align:-2px}
+.mt{margin-top:12px}
+.tag{display:inline-flex;align-items:center;height:19px;padding:0 7px;border-radius:var(--r-full);
+  font-size:10.5px;font-family:var(--font-mono);color:var(--text-3);background:var(--bg-3);border:1px solid var(--line-subtle);white-space:nowrap}
+.tag.main{color:var(--brand-200);background:var(--accent-soft);border-color:transparent}
+.tag.ok{color:var(--success);background:var(--success-bg);border-color:transparent}
+.tag.warn{color:var(--warning);background:var(--warning-bg);border-color:transparent}
+.tag.err{color:var(--danger);background:var(--danger-bg);border-color:transparent}
+.spin{width:12px;height:12px;border:1.5px solid var(--line-default);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;display:inline-block;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .caret{display:inline-block;width:3px;height:1em;background:var(--accent);vertical-align:-2px;border-radius:1px;animation:breathe 1.4s var(--ease-in-out) infinite}
 @keyframes breathe{0%,100%{opacity:.3}50%{opacity:.95}}
 
 /* ---------------- 对话 ---------------- */
-.msgs{max-width:880px;margin:0 auto;padding:var(--sp-6) var(--sp-6) var(--sp-2);width:100%}
-.msg{display:flex;gap:10px;margin-bottom:var(--sp-5);align-items:flex-start;animation:rise 220ms var(--ease-out) both}
+.msgs{max-width:860px;margin:0 auto;padding:26px 24px 96px;width:100%}
+.msg{display:flex;gap:11px;margin-bottom:20px;align-items:flex-start;animation:rise 220ms var(--ease-out) both}
 @keyframes rise{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
-.msg .bd{min-width:0;flex:1;max-width:84%}
-.msg .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.msg .bd{min-width:0;flex:1;max-width:calc(100% - 46px)}
+.msg .hd{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap}
 .msg .hd b{font-size:var(--fs-h6);font-weight:600}
-.prose{font-size:var(--fs-body);line-height:var(--lh-body);letter-spacing:.01em;word-break:break-word;overflow-wrap:anywhere}
+.prose{font-size:var(--fs-body);line-height:1.78;word-break:break-word;overflow-wrap:anywhere}
 .prose p{margin:0 0 10px}
 .prose p:last-child{margin-bottom:0}
-.prose h1,.prose h2,.prose h3,.prose h4,.prose h5,.prose h6{margin:16px 0 8px;font-weight:600;line-height:var(--lh-h5)}
+.prose h1,.prose h2,.prose h3,.prose h4,.prose h5,.prose h6{margin:16px 0 8px;font-weight:600;line-height:1.4}
 .prose h1{font-size:var(--fs-h3)}.prose h2{font-size:var(--fs-h4)}
 .prose h3,.prose h4,.prose h5,.prose h6{font-size:var(--fs-h5)}
 .prose ul,.prose ol{margin:0 0 10px;padding-left:22px}
 .prose li{margin:4px 0}
-.prose blockquote{margin:0 0 10px;padding:2px 0 2px 13px;border-left:2px solid var(--line-strong);color:var(--text-2)}
+.prose blockquote{margin:0 0 10px;padding:2px 0 2px 12px;border-left:2px solid var(--line-strong);color:var(--text-2)}
 .prose hr{border:0;border-top:1px solid var(--line-subtle);margin:16px 0}
 .prose strong{font-weight:600;color:var(--text-1)}
-.prose code.ic{background:rgba(201,164,92,.12);padding:1px 5px;border-radius:var(--r-xs);font-size:.92em;color:var(--accent)}
-.prose pre.code{margin:0 0 10px;background:var(--code-bg);border:1px solid var(--line-default);border-radius:var(--r-sm);overflow:hidden}
-.prose pre.code .bar{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;background:rgba(201,164,92,.05);border-bottom:1px solid var(--line-subtle);font-size:var(--fs-micro);color:var(--text-3);font-family:var(--font-mono)}
-.prose pre.code .bar button{font-size:var(--fs-micro);color:var(--text-3);transition:color var(--dur-quick)}
+.prose code.ic{background:var(--bg-3);padding:1.5px 6px;border-radius:6px;font-size:.92em;color:var(--brand-200)}
+.prose pre.code{margin:0 0 10px;background:var(--code-bg);border:1px solid var(--line-subtle);border-radius:var(--r-sm);overflow:hidden}
+.prose pre.code .bar{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;background:rgba(255,255,255,.045);border-bottom:1px solid var(--line-subtle);font-size:10.5px;color:var(--text-3);font-family:var(--font-mono)}
+.prose pre.code .bar button{font-size:10.5px;color:var(--text-3)}
 .prose pre.code .bar button:hover{color:var(--accent)}
-.prose pre.code code{display:block;padding:12px 14px;overflow-x:auto;font-size:var(--fs-code);line-height:var(--lh-code);color:#E8E0CE}
-[data-theme="light"] .prose pre.code code{color:#F3EEE4}
+.prose pre.code code{display:block;padding:12px 14px;overflow-x:auto;font-size:var(--fs-code);line-height:1.68;color:#D6DCEF}
+[data-theme="light"] .prose pre.code code{color:#E8ECF7}
 .msg.user{flex-direction:row-reverse}
 .msg.user .bd{flex:0 1 auto;max-width:78%}
-.msg.user .prose{
-  background:linear-gradient(135deg,rgba(201,164,92,.16),rgba(201,164,92,.08));
-  border:1px solid rgba(201,164,92,.26);
-  border-radius:var(--r-lg);border-bottom-right-radius:var(--r-xs);padding:12px 16px;
-}
+.msg.user .prose{background:var(--user-grad);border:1px solid rgba(139,147,255,.22);border-radius:var(--r-lg);
+  border-bottom-right-radius:var(--r-xs);padding:11px 15px}
+[data-theme="light"] .msg.user .prose{border-color:rgba(99,83,232,.18)}
+
+/* 附件 */
+.msg-imgs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.msg-img{max-width:220px;max-height:220px;border-radius:var(--r-sm);border:1px solid var(--line-default);cursor:zoom-in;display:block;object-fit:cover}
+.msg-files{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.file-chip{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:var(--r-sm);
+  background:var(--bg-2);border:1px solid var(--line-default);font-size:var(--fs-cap);color:var(--text-2)}
+.file-chip i{font-style:normal;color:var(--accent)}
 
 /* 系统回执 */
-.msg-sys{margin:-8px 0 var(--sp-5)}
+.msg-sys{margin:-6px 0 20px}
 .msg-sys .op{border-style:dashed;background:transparent}
 .msg-sys .oh{font-size:var(--fs-cap);color:var(--text-3)}
 
 /* 指令卡片 */
-.ops{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-width:640px}
-.op{
-  border:1px solid transparent;border-radius:var(--r-md);overflow:hidden;
-  background:linear-gradient(var(--bg-2),var(--bg-2)) padding-box,
-             linear-gradient(135deg,rgba(217,190,132,.32),rgba(201,164,92,.08) 50%,rgba(217,190,132,.22)) border-box;
-  transition:transform var(--dur-base) var(--ease-out),box-shadow var(--dur-base) var(--ease-out);
-}
-[data-theme="light"] .op{
-  background:linear-gradient(var(--bg-2),var(--bg-2)) padding-box,
-             linear-gradient(135deg,rgba(140,110,51,.26),rgba(140,110,51,.06) 50%,rgba(140,110,51,.18)) border-box;
-}
-.op:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
-.op .oh{min-height:44px;padding:0 14px;display:flex;align-items:center;gap:10px;font-size:var(--fs-ui);cursor:pointer;user-select:none;transition:background var(--dur-base)}
-.op .oh:hover{background:rgba(201,164,92,.06)}
-.op .oh .oi{opacity:.75;font-size:13px;color:var(--accent)}
+.ops{margin-top:11px;display:flex;flex-direction:column;gap:8px;max-width:660px}
+.op{border:1px solid var(--line-default);border-radius:var(--r-md);overflow:hidden;background:var(--bg-1);
+  transition:transform var(--dur-base) var(--ease-out),box-shadow var(--dur-base),border-color var(--dur-base)}
+.op:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm);border-color:var(--line-strong)}
+.op .oh{min-height:42px;padding:0 13px;display:flex;align-items:center;gap:9px;font-size:var(--fs-ui);cursor:pointer;user-select:none;transition:background var(--dur-base)}
+.op .oh:hover{background:var(--bg-2)}
+.op .oh .oi{font-size:13px;color:var(--accent);opacity:.9}
 .op .oh .ttl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-2)}
-.op .oh .chev{color:var(--text-3);font-size:14px;transition:transform var(--dur-base) var(--ease-out)}
+.op .oh .chev{color:var(--text-3);font-size:13px;transition:transform var(--dur-base) var(--ease-out)}
 .op.open .oh .chev{transform:rotate(180deg)}
-.op .ob{display:grid;grid-template-rows:0fr;transition:grid-template-rows 220ms var(--ease-out),opacity 220ms var(--ease-out);opacity:0;padding:0 14px}
-.op.open .ob{grid-template-rows:1fr;opacity:1;padding:12px 14px 14px;border-top:1px solid var(--line-subtle)}
+.op .ob{display:grid;grid-template-rows:0fr;opacity:0;padding:0 13px;
+  transition:grid-template-rows 240ms var(--ease-out),opacity 200ms var(--ease-out),padding 240ms var(--ease-out)}
+.op.open .ob{grid-template-rows:1fr;opacity:1;padding:12px 13px 14px;border-top:1px solid var(--line-subtle)}
 .op .ob>*{overflow:hidden;min-height:0}
-.op .ob .prose{font-size:var(--fs-cap);line-height:1.7}
-.op .ob .kv{margin-bottom:2px}
+.op .ob .prose{font-size:var(--fs-cap);line-height:1.72}
+.op .ob .kv{margin-bottom:3px}
 
 /* 文档卡片 */
-.doc-card{
-  display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 14px;
-  border:1px solid var(--line-default);border-radius:var(--r-sm);
-  background:var(--bg-2);max-width:420px;cursor:pointer;text-align:left;width:100%;
-  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out),box-shadow var(--dur-base) var(--ease-out);
-}
-.doc-card:hover{transform:translateY(-1px);border-color:var(--line-strong);box-shadow:var(--shadow-md)}
+.doc-card{display:flex;align-items:center;gap:12px;min-height:60px;padding:11px 14px;width:100%;text-align:left;
+  border:1px solid var(--line-default);border-radius:var(--r-sm);background:var(--bg-1);max-width:440px;cursor:pointer;
+  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base),box-shadow var(--dur-base)}
+.doc-card:hover{transform:translateY(-1px);border-color:var(--line-strong);box-shadow:var(--shadow-sm)}
 .doc-card .dic{width:36px;height:36px;border-radius:var(--r-xs);flex:0 0 auto;display:grid;place-items:center;
-  background:rgba(201,164,92,.12);color:var(--accent);font-size:16px}
-.doc-card .dtt{font-size:var(--fs-h6);font-weight:600;margin-bottom:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.doc-card .dmt{font-size:var(--fs-cap);color:var(--text-3);font-family:var(--font-mono)}
-.doc-chip{
-  display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;margin:0 6px 6px 0;
-  border-radius:var(--r-full);font-size:var(--fs-cap);color:var(--text-2);cursor:pointer;
-  background:rgba(201,164,92,.13);border:1px solid rgba(201,164,92,.26);
-  transition:background var(--dur-base),border-color var(--dur-base);
-}
-.doc-chip:hover{background:rgba(201,164,92,.13);border-color:var(--line-strong);color:var(--accent)}
+  background:var(--accent-soft);color:var(--accent);font-size:16px}
+.doc-card .dtt{font-size:var(--fs-h6);font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-card .dmt{font-size:11px;color:var(--text-3);font-family:var(--font-mono)}
+.doc-chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;margin:0 6px 6px 0;
+  border-radius:var(--r-full);font-size:var(--fs-cap);color:var(--brand-200);cursor:pointer;
+  background:var(--accent-soft);border:1px solid transparent;transition:filter var(--dur-base),transform var(--dur-base)}
+.doc-chip:hover{filter:brightness(1.15);transform:translateY(-1px)}
 
 /* ---------------- 输入区 ---------------- */
-.composer{padding:0 var(--sp-6) var(--sp-5)}
-.msgs{padding-bottom:76px}
-.composer-in{max-width:880px;margin:0 auto;position:relative}
-.cbox{
-  border-radius:var(--r-md);padding:2px 6px 2px 14px;display:flex;gap:6px;align-items:flex-end;
+.composer{padding:0 24px 20px}
+.composer-in{max-width:860px;margin:0 auto;position:relative}
+.drop-hint{position:absolute;inset:-8px;border:2px dashed var(--accent);border-radius:var(--r-lg);
+  background:var(--accent-soft);display:grid;place-items:center;font-size:var(--fs-ui);color:var(--brand-200);
+  z-index:9;pointer-events:none;opacity:0;transition:opacity var(--dur-base)}
+.composer.dragging .drop-hint{opacity:1}
+.attach-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.attach{position:relative;display:flex;align-items:center;gap:8px;height:44px;padding:0 30px 0 8px;border-radius:var(--r-sm);
+  background:var(--bg-2);border:1px solid var(--line-default);font-size:var(--fs-cap);color:var(--text-2);max-width:240px}
+.attach img{width:30px;height:30px;border-radius:6px;object-fit:cover;flex:0 0 auto}
+.attach .an{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attach .ax{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:6px;
+  display:grid;place-items:center;color:var(--text-3);font-size:12px}
+.attach .ax:hover{background:var(--bg-3);color:var(--danger)}
+.cbox{border-radius:var(--r-lg);padding:3px 7px 3px 14px;display:flex;gap:6px;align-items:flex-end;
   background:var(--glass-bg);-webkit-backdrop-filter:var(--glass-filter);backdrop-filter:var(--glass-filter);
-  border:1px solid var(--line-default);
-  transition:border-color var(--dur-base) var(--ease-out),box-shadow var(--dur-base) var(--ease-out);
-}
-.cbox:focus-within{border-color:var(--line-gold);box-shadow:0 0 0 3px rgba(201,164,92,.14)}
-.cbox textarea{flex:1;min-width:0;background:none;border:0;padding:11px 0;max-height:200px;min-height:44px;font-size:var(--fs-body);line-height:1.6;box-shadow:none;border-radius:0;overflow-wrap:anywhere}
+  border:1px solid var(--line-default);box-shadow:var(--shadow-md);
+  transition:border-color var(--dur-base) var(--ease-out),box-shadow var(--dur-base) var(--ease-out)}
+.cbox:focus-within{border-color:var(--line-strong);box-shadow:var(--shadow-md),0 0 0 3px var(--accent-soft)}
+.cbox textarea{flex:1;min-width:0;background:none;border:0;padding:11px 0;max-height:200px;min-height:42px;
+  font-size:var(--fs-body);line-height:1.62;box-shadow:none;border-radius:0;overflow-wrap:anywhere}
 .cbox textarea:focus{box-shadow:none;background:none;border:0}
-.crow{display:flex;gap:4px;align-items:center;flex:0 0 auto;padding-bottom:6px}
-.crow .icon-btn{width:32px;height:32px;border-radius:var(--r-xs);font-size:15px}
-.send{
-  width:32px;height:32px;border-radius:var(--r-xs);display:grid;place-items:center;font-size:15px;
-  color:var(--text-on-gold);background:var(--gold-grad-matte);border:1px solid rgba(233,216,178,.38);
-  box-shadow:inset 0 1px 0 rgba(255,246,224,.42),0 6px 18px rgba(201,164,92,.18);
-  transition:transform var(--dur-base) var(--ease-out),filter var(--dur-base) var(--ease-out);
-}
-.send:hover{transform:translateY(-1px);filter:brightness(1.06)}
-.send:active{transform:translateY(0)}
-.send.stop{background:linear-gradient(135deg,#C2554B,#A63A31);color:#fff;border-color:rgba(255,255,255,.25)}
+.crow{display:flex;gap:4px;align-items:center;flex:0 0 auto;padding-bottom:5px}
+.crow .icon-btn{width:32px;height:32px;font-size:15px}
+.send{width:34px;height:34px;border-radius:var(--r-sm);display:grid;place-items:center;font-size:15px;color:#fff;
+  background:var(--brand-grad-matte);box-shadow:var(--shadow-brand),inset 0 1px 0 rgba(255,255,255,.26);
+  transition:transform var(--dur-base) var(--ease-out),filter var(--dur-base)}
+.send:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.send:active{transform:translateY(0) scale(.96)}
+.send.stop{background:linear-gradient(140deg,#FF5D5D,#D63B3B)}
 .send:disabled{opacity:.42}
-.hint{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-left:4px;
-  font-size:var(--fs-cap);color:var(--text-3)}
-.hint code{background:rgba(201,164,92,.10);padding:1px 6px;border-radius:var(--r-xs);font-size:var(--fs-micro);color:var(--accent)}
-.hint-toggle{font-size:var(--fs-cap);color:var(--text-3);padding:2px 8px;border-radius:var(--r-xs);border:1px solid var(--line-default);transition:all var(--dur-quick)}
+.hint{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-left:4px;font-size:11px;color:var(--text-3)}
+.hint code{background:var(--bg-3);padding:1px 6px;border-radius:5px;font-size:10.5px;color:var(--brand-200);font-family:var(--font-mono)}
+.hint-toggle{font-size:11px;color:var(--text-3);padding:2px 8px;border-radius:var(--r-xs);border:1px solid var(--line-default)}
 .hint-toggle:hover{color:var(--text-1);border-color:var(--line-strong)}
 .hint-toggle i{font-style:normal;display:inline-block;transition:transform var(--dur-base) var(--ease-out)}
 .hint.show-syn .hint-toggle i{transform:rotate(180deg)}
@@ -466,236 +434,318 @@ html[data-glass="0"] .top{backdrop-filter:none;background:var(--bg-1)}
 .hint.show-syn .hint-syn{display:inline-flex}
 
 /* ---------------- 统计气泡 ---------------- */
-.bubble{position:absolute;bottom:calc(100% + 16px);left:0;z-index:6;max-width:min(420px,92vw);
-  border-radius:var(--r-full);overflow:hidden;
-  background:var(--glass-bg);-webkit-backdrop-filter:blur(16px) saturate(150%);backdrop-filter:blur(16px) saturate(150%);
-  border:1px solid var(--line-default);
-  transition:border-radius var(--dur-slow) var(--ease-out),box-shadow var(--dur-slow) var(--ease-out),width var(--dur-slow) var(--ease-out);
-  transform-origin:left bottom;animation:rise 260ms var(--ease-out) both;
-}
-.bubble.open{width:340px;border-radius:var(--r-md);box-shadow:var(--shadow-lg);-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%)}
+.bubble{position:absolute;bottom:calc(100% + 14px);left:0;z-index:6;max-width:min(420px,92vw);
+  border-radius:var(--r-full);overflow:hidden;background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);
+  border:1px solid var(--glass-line);box-shadow:var(--shadow-md);
+  transition:border-radius var(--dur-slow) var(--ease-out),box-shadow var(--dur-slow),width var(--dur-slow);
+  animation:rise 240ms var(--ease-out) both}
+.bubble.open{width:344px;border-radius:var(--r-md);box-shadow:var(--shadow-lg);-webkit-backdrop-filter:blur(26px) saturate(170%);backdrop-filter:blur(26px) saturate(170%)}
 html[data-glass="0"] .bubble{background:var(--bg-1);backdrop-filter:none}
 .bub-head{display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;width:100%;text-align:left}
 .bubble.open .bub-head{height:44px;padding:0 14px}
-.bub-orb{width:12px;height:12px;flex:0 0 auto}
-.bub-mini{font-size:var(--fs-micro);font-family:var(--font-mono);color:var(--text-2);white-space:nowrap}
-.bub-mini b{color:var(--accent);font-weight:600}
+.bub-orb{width:11px;height:11px;flex:0 0 auto;border-radius:50%;background:var(--brand-grad);box-shadow:0 0 10px rgba(124,108,255,.8)}
+.bub-mini{font-size:11px;font-family:var(--font-mono);color:var(--text-2);white-space:nowrap}
+.bub-mini b{color:var(--brand-200);font-weight:600}
 .bub-chev{margin-left:auto;color:var(--text-3);font-size:12px;transition:transform var(--dur-slow) var(--ease-out)}
 .bubble.open .bub-chev{transform:rotate(180deg)}
-.bub-body{max-height:0;overflow:hidden;opacity:0;transition:max-height var(--dur-slow) var(--ease-out),opacity var(--dur-base) var(--ease-out)}
-.bubble.open .bub-body{max-height:520px;opacity:1}
-.bub-lbl{font-size:var(--fs-cap);color:var(--text-3);padding:0 14px 8px}
-.bub-agents{display:flex;flex-direction:column;gap:2px;padding:0 14px}
+.bub-body{max-height:0;overflow:hidden;opacity:0;transition:max-height var(--dur-slow) var(--ease-out),opacity var(--dur-base)}
+.bubble.open .bub-body{max-height:540px;opacity:1}
+.bub-lbl{font-size:11px;color:var(--text-3);padding:0 14px 8px}
+.bub-agents{display:flex;flex-direction:column;padding:0 14px}
 .bub-chip{display:flex;align-items:center;gap:8px;height:34px;position:relative}
-.bub-chip b{font-size:var(--fs-cap);font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bub-chip i{font-style:normal;font-size:var(--fs-micro);font-family:var(--font-mono);color:var(--text-3)}
-.bub-chip em{font-style:normal;font-size:var(--fs-cap);font-family:var(--font-mono);color:var(--text-1);min-width:52px;text-align:right}
-.bub-bar{position:absolute;left:0;bottom:0;height:2px;border-radius:var(--r-full);background:rgba(201,164,92,.55)}
+.bub-chip b{font-size:12px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bub-chip i{font-style:normal;font-size:10.5px;font-family:var(--font-mono);color:var(--text-3)}
+.bub-chip em{font-style:normal;font-size:12px;font-family:var(--font-mono);color:var(--text-1);min-width:54px;text-align:right}
+.bub-bar{position:absolute;left:0;bottom:0;height:2px;border-radius:var(--r-full);background:var(--brand-grad)}
 .bub-sep{height:1px;background:var(--line-subtle);margin:10px 14px}
 .bub-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 12px}
-.bub-stat{background:rgba(201,164,92,.05);border:1px solid var(--line-subtle);border-radius:var(--r-xs);padding:8px 10px}
+.bub-stat{background:var(--bg-2);border:1px solid var(--line-subtle);border-radius:var(--r-xs);padding:8px 10px}
 .bub-stat span{display:block;font-size:10px;color:var(--text-3);margin-bottom:3px}
 .bub-stat b{display:block;font-size:var(--fs-h5);font-family:var(--font-mono);font-weight:600}
-.bub-stat.hl b{color:var(--accent)}
-.bub-foot{display:flex;justify-content:space-between;padding:0 14px 12px;font-size:var(--fs-micro);color:var(--text-3);font-family:var(--font-mono)}
+.bub-stat.hl b{color:var(--brand-200)}
+.bub-foot{display:flex;justify-content:space-between;padding:0 14px 12px;font-size:10.5px;color:var(--text-3);font-family:var(--font-mono)}
 
 /* ---------------- 表单 / 卡片 ---------------- */
-.page{max-width:880px;margin:0 auto;padding:var(--sp-6) var(--sp-6) 70px;width:100%}
-.page h2{margin:0 0 6px;font-size:var(--fs-h2);line-height:var(--lh-h2);letter-spacing:var(--ls-h2);font-weight:600}
-.page .sub{color:var(--text-3);font-size:var(--fs-cap);margin-bottom:var(--sp-5)}
-.card{background:var(--bg-1);border:1px solid var(--line-default);border-radius:var(--r-lg);padding:var(--sp-6);margin-bottom:var(--sp-4)}
-.card>h3{margin:0 0 var(--sp-4);font-size:var(--fs-h5);font-weight:600;display:flex;align-items:center;gap:8px}
-.fld{margin-bottom:var(--sp-3)}
+.page{max-width:900px;margin:0 auto;padding:26px 24px 72px;width:100%}
+.page h2{margin:0 0 6px;font-size:var(--fs-h2);font-weight:650;letter-spacing:-.01em}
+.page .sub{color:var(--text-3);font-size:var(--fs-cap);margin-bottom:20px;line-height:1.6}
+.card{background:var(--bg-1);border:1px solid var(--line-default);border-radius:var(--r-lg);padding:22px;margin-bottom:14px}
+.card>h3{margin:0 0 16px;font-size:var(--fs-h5);font-weight:600;display:flex;align-items:center;gap:8px}
+.fld{margin-bottom:13px}
 .fld:last-child{margin-bottom:0}
-.fld label{display:block;font-size:var(--fs-cap);color:var(--text-3);margin-bottom:6px;letter-spacing:var(--ls-cap)}
-.fld .hint2{font-size:var(--fs-cap);color:var(--text-3);margin-top:6px;line-height:1.6}
-.row{display:flex;gap:var(--sp-3);align-items:flex-start;flex-wrap:wrap}
+.fld label{display:block;font-size:11.5px;color:var(--text-3);margin-bottom:6px;letter-spacing:.02em}
+.fld .hint2{font-size:11px;color:var(--text-3);margin-top:6px;line-height:1.6}
+.row{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .row>*{flex:1;min-width:150px}
 .row .fix{flex:0 0 auto;min-width:0}
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-subtle);margin-bottom:var(--sp-5)}
-.tabs button{padding:10px 14px;font-size:var(--fs-ui);color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--dur-base) var(--ease-out)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-subtle);margin-bottom:20px;overflow-x:auto}
+.tabs button{padding:10px 14px;font-size:var(--fs-ui);color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;
+  transition:color var(--dur-base) var(--ease-out),border-color var(--dur-base)}
 .tabs button:hover{color:var(--text-1)}
 .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
 .emoji-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin-top:8px}
 .emoji-grid button{aspect-ratio:1;border-radius:var(--r-xs);font-size:16px;display:grid;place-items:center;
-  background:var(--bg-2);border:1px solid var(--line-default);
-  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base)}
+  background:var(--bg-2);border:1px solid var(--line-default);transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base)}
 .emoji-grid button:hover{transform:translateY(-1px);border-color:var(--line-strong)}
-.emoji-grid button.on{border-color:var(--accent);background:rgba(201,164,92,.12)}
+.emoji-grid button.on{border-color:var(--accent);background:var(--accent-soft)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-cap);padding:4px 10px;border-radius:var(--r-full);
-  color:var(--text-2);background:rgba(201,164,92,.06);border:1px solid var(--line-default);transition:all var(--dur-base)}
-.chip:hover{border-color:var(--line-strong)}
-.chip.on{border-color:var(--accent);color:var(--accent);background:rgba(201,164,92,.12)}
-.empty{text-align:center;color:var(--text-3);font-size:var(--fs-cap);padding:36px 12px;border:1px dashed var(--line-default);border-radius:var(--r-sm)}
-.switch{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);padding:14px 0;border-bottom:1px solid var(--line-subtle);min-height:56px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-cap);padding:5px 11px;border-radius:var(--r-full);
+  color:var(--text-2);background:var(--bg-3);border:1px solid var(--line-default);cursor:pointer;
+  transition:all var(--dur-base) var(--ease-out)}
+.chip:hover{border-color:var(--line-strong);transform:translateY(-1px)}
+.chip.on{border-color:var(--accent);color:var(--brand-200);background:var(--accent-soft)}
+.empty{text-align:center;color:var(--text-3);font-size:var(--fs-cap);padding:36px 12px;border:1px dashed var(--line-default);border-radius:var(--r-sm);line-height:1.7}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--line-subtle);min-height:56px}
 .switch:last-child{border-bottom:0}
 .switch .lbl{font-size:var(--fs-ui)}
-.switch .dsc{font-size:var(--fs-cap);color:var(--text-3);margin-top:3px;line-height:1.5}
-.tgl{width:40px;height:22px;border-radius:var(--r-full);flex:0 0 auto;position:relative;cursor:pointer;
-  background:rgba(255,255,255,.10);border:1px solid var(--line-default);padding:2px;
+.switch .dsc{font-size:11px;color:var(--text-3);margin-top:3px;line-height:1.55}
+.tgl{width:42px;height:24px;border-radius:var(--r-full);flex:0 0 auto;position:relative;cursor:pointer;padding:2px;
+  background:var(--bg-3);border:1px solid var(--line-default);
   transition:background var(--dur-base) var(--ease-in-out),border-color var(--dur-base)}
-[data-theme="light"] .tgl{background:rgba(28,22,10,.08)}
-.tgl::before{content:"";position:absolute;inset:-8px}
-.tgl::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
-  background:var(--text-2);transition:transform var(--dur-base) var(--ease-spring),background var(--dur-base)}
-.tgl.on{background:var(--gold-grad-matte);border-color:var(--line-gold)}
-.tgl.on::after{transform:translateX(18px);background:var(--text-on-gold)}
-
-/* 主题色板选择 */
+.tgl::before{content:"";position:absolute;inset:-9px}
+.tgl::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--text-3);
+  transition:transform var(--dur-base) var(--ease-spring),background var(--dur-base)}
+.tgl.on{background:var(--brand-grad-matte);border-color:transparent}
+.tgl.on::after{transform:translateX(18px);background:#fff}
 .swatches{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-.swatch{width:44px;height:44px;border-radius:var(--r-xs);border:1px solid var(--line-default);cursor:pointer;position:relative;
-  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base)}
+.swatch{width:42px;height:42px;border-radius:var(--r-sm);border:1px solid var(--line-default);cursor:pointer;
+  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base),box-shadow var(--dur-base)}
 .swatch:hover{transform:translateY(-2px)}
-.swatch.on{border-color:var(--accent);box-shadow:var(--shadow-gold)}
+.swatch.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .slider{display:flex;align-items:center;gap:12px}
 .slider input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--line-default);padding:0;border:0}
-.slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--gold-grad-matte);border:1px solid var(--line-gold);cursor:pointer}
-.slider .val{font-family:var(--font-mono);font-size:var(--fs-cap);color:var(--text-3);min-width:44px;text-align:right}
+.slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--brand-grad-matte);border:0;cursor:pointer;box-shadow:var(--shadow-brand)}
+.slider .val{font-family:var(--font-mono);font-size:11px;color:var(--text-3);min-width:46px;text-align:right}
 
 /* ---------------- 检索 ---------------- */
-.search-bar{display:flex;gap:var(--sp-3);align-items:center;margin-bottom:var(--sp-4)}
-.search-bar input{height:44px;font-size:var(--fs-h6)}
-.search-tabs{display:flex;gap:6px;margin-bottom:var(--sp-4);flex-wrap:wrap}
-.hit{padding:14px;border-radius:var(--r-sm);border:1px solid var(--line-default);background:var(--bg-1);margin-bottom:10px;cursor:pointer;
-  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base)}
-.hit:hover{transform:translateY(-1px);border-color:var(--line-strong)}
+.search-bar{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.search-bar input{height:44px;font-size:var(--fs-h5)}
+.search-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.hit{padding:14px 16px;border-radius:var(--r-sm);border:1px solid var(--line-default);background:var(--bg-1);margin-bottom:10px;cursor:pointer;
+  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base),box-shadow var(--dur-base)}
+.hit:hover{transform:translateY(-1px);border-color:var(--line-strong);box-shadow:var(--shadow-sm)}
 .hit .h1{font-size:var(--fs-ui);font-weight:600;margin-bottom:4px}
-.hit .hm{font-size:var(--fs-micro);color:var(--text-3);font-family:var(--font-mono);margin-bottom:8px}
-.hit .hb{font-size:var(--fs-cap);color:var(--text-2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.hit mark{background:rgba(201,164,92,.24);color:var(--accent);border-radius:3px;padding:0 2px}
+.hit .hm{font-size:10.5px;color:var(--text-3);font-family:var(--font-mono);margin-bottom:8px}
+.hit .hb{font-size:var(--fs-cap);color:var(--text-2);line-height:1.72;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hit mark{background:rgba(124,108,255,.28);color:var(--brand-100);border-radius:3px;padding:0 2px}
 
 /* ---------------- 文档 ---------------- */
 .docs{display:flex;height:100%}
-.docs-list{width:300px;min-width:300px;background:var(--bg-1);border-right:1px solid var(--line-subtle);overflow-y:auto;padding:var(--sp-3)}
-.docs-list .di{padding:8px 10px;border-radius:var(--r-xs);cursor:pointer;margin-bottom:2px;min-height:52px;
+.docs-list{width:290px;min-width:290px;background:var(--bg-1);border-right:1px solid var(--line-subtle);overflow-y:auto;padding:12px}
+.docs-list .di{padding:9px 11px;border-radius:var(--r-sm);cursor:pointer;margin-bottom:3px;min-height:52px;
   transition:background var(--dur-base) var(--ease-out),box-shadow var(--dur-base)}
-.docs-list .di:hover{background:rgba(201,164,92,.08)}
-.docs-list .di.on{background:rgba(201,164,92,.12);box-shadow:inset 2px 0 0 var(--accent)}
-.docs-list .di.on .t{color:var(--accent)}
+.docs-list .di:hover{background:var(--accent-soft)}
+.docs-list .di.on{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+.docs-list .di.on .t{color:var(--brand-200)}
 .docs-list .di .t{font-size:var(--fs-ui);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.docs-list .di .m{font-size:var(--fs-micro);color:var(--text-3);font-family:var(--font-mono)}
+.docs-list .di .m{font-size:10.5px;color:var(--text-3);font-family:var(--font-mono)}
 .doc-edit{flex:1;display:flex;flex-direction:column;min-width:0}
-.doc-bar{min-height:56px;padding:0 var(--sp-4);border-bottom:1px solid var(--line-subtle);display:flex;gap:var(--sp-3);align-items:center;background:var(--bg-1)}
+.doc-bar{min-height:56px;padding:0 18px;border-bottom:1px solid var(--line-subtle);display:flex;gap:12px;align-items:center;background:var(--bg-1)}
 .doc-bar input{font-size:var(--fs-h5);font-weight:600;background:none;border:0;padding:4px 0;box-shadow:none}
 .doc-bar input:focus{box-shadow:none;border:0}
 .doc-area{flex:1;display:flex;overflow:hidden}
-.doc-area textarea{flex:1;border:0;background:none;font-family:var(--font-mono);font-size:var(--fs-code);line-height:1.9;resize:none;padding:var(--sp-8) 40px;max-width:760px;margin:0 auto;box-shadow:none}
+.doc-area textarea{flex:1;border:0;background:none;font-family:var(--font-mono);font-size:var(--fs-code);line-height:1.9;
+  resize:none;padding:32px 28px;max-width:800px;margin:0 auto;box-shadow:none}
 .doc-area textarea:focus{box-shadow:none;background:none;border:0}
 
-/* 文档抽屉 */
+/* 抽屉 */
 .drawer-scrim{position:fixed;inset:0;z-index:70;background:var(--scrim);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
   opacity:0;transition:opacity var(--dur-base) var(--ease-out)}
 .drawer-scrim.in{opacity:1}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:560px;max-width:100vw;z-index:71;
-  background:var(--bg-1);border-left:1px solid var(--line-strong);display:flex;flex-direction:column;
-  transform:translateX(100%);transition:transform var(--dur-slow) var(--ease-out);
-  box-shadow:-24px 0 60px rgba(0,0,0,.45)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:600px;max-width:100vw;z-index:71;background:var(--bg-1);
+  border-left:1px solid var(--line-default);display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform var(--dur-slow) var(--ease-out);box-shadow:-24px 0 60px rgba(0,0,0,.5)}
 .drawer.in{transform:none}
-.drawer-head{height:56px;min-height:56px;padding:0 var(--sp-4);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-subtle)}
+.drawer-head{height:56px;min-height:56px;padding:0 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-subtle)}
 .drawer-head .dt{flex:1;min-width:0;font-size:var(--fs-h5);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.drawer-body{flex:1;overflow-y:auto;padding:var(--sp-8) var(--sp-6) 60px}
-.drawer-body .prose{max-width:720px;margin:0 auto;font-size:var(--fs-body);line-height:1.85}
+.drawer-body{flex:1;overflow-y:auto;padding:32px 28px 64px}
+.drawer-body .prose{max-width:760px;margin:0 auto;font-size:var(--fs-body);line-height:1.88}
+
+/* ---------------- GitHub ---------------- */
+.gh-repo{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:var(--r-sm);border:1px solid var(--line-default);
+  background:var(--bg-1);margin-bottom:8px;cursor:pointer;transition:transform var(--dur-base),border-color var(--dur-base)}
+.gh-repo:hover{transform:translateY(-1px);border-color:var(--line-strong)}
+.gh-repo .rn{font-size:var(--fs-ui);font-weight:600}
+.gh-repo .rd{font-size:11px;color:var(--text-3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gh-file{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:var(--r-xs);font-size:var(--fs-cap);
+  color:var(--text-2);cursor:pointer;font-family:var(--font-mono)}
+.gh-file:hover{background:var(--accent-soft);color:var(--text-1)}
+.log{background:var(--code-bg);border:1px solid var(--line-subtle);border-radius:var(--r-sm);padding:12px 14px;
+  font-family:var(--font-mono);font-size:11.5px;line-height:1.7;color:#C8D0E6;max-height:340px;overflow:auto;white-space:pre-wrap}
+[data-theme="light"] .log{color:#E8ECF7}
 
 /* ---------------- 弹层 ---------------- */
-.mask{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:var(--sp-6);
+.mask{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;
   background:var(--scrim);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;transition:opacity var(--dur-base) var(--ease-out)}
 .mask.in{opacity:1}
 .dlg{width:100%;max-width:560px;background:var(--bg-1);border:1px solid var(--line-default);border-radius:var(--r-xl);
-  padding:var(--sp-6);max-height:calc(100vh - 96px);overflow-y:auto;box-shadow:var(--shadow-lg);
+  padding:24px;max-height:calc(100vh - 96px);overflow-y:auto;box-shadow:var(--shadow-lg);
   opacity:0;transform:scale(.965) translateY(8px);transition:all var(--dur-slow) var(--ease-out)}
 .mask.in .dlg{opacity:1;transform:none}
-.dlg.sm{max-width:420px}.dlg.lg{max-width:880px}
+.dlg.sm{max-width:420px}.dlg.lg{max-width:900px}
 .dlg h3{margin:0 0 6px;font-size:var(--fs-h4);font-weight:600}
-.dlg .dsc{font-size:var(--fs-cap);color:var(--text-3);margin-bottom:var(--sp-4);line-height:1.6}
-.dlg .act{display:flex;justify-content:flex-end;gap:8px;margin-top:var(--sp-6)}
+.dlg .dsc{font-size:var(--fs-cap);color:var(--text-3);margin-bottom:16px;line-height:1.6}
+.dlg .act{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
+.lightbox{position:fixed;inset:0;z-index:95;background:rgba(4,5,10,.9);display:grid;place-items:center;padding:24px;cursor:zoom-out;
+  opacity:0;transition:opacity var(--dur-base)}
+.lightbox.in{opacity:1}
+.lightbox img{max-width:100%;max-height:100%;border-radius:var(--r-sm);box-shadow:0 24px 80px rgba(0,0,0,.7)}
 .toasts{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
-.toast{padding:9px 16px;border-radius:var(--r-sm);font-size:var(--fs-cap);max-width:470px;
-  background:var(--bg-1);border:1px solid var(--line-strong);box-shadow:var(--shadow-lg);
-  opacity:0;transform:translateY(-10px) scale(.97);transition:all var(--dur-slow) var(--ease-out)}
+.toast{padding:9px 16px;border-radius:var(--r-sm);font-size:var(--fs-cap);max-width:min(470px,90vw);background:var(--bg-1);
+  border:1px solid var(--line-strong);box-shadow:var(--shadow-lg);opacity:0;transform:translateY(-10px) scale(.97);
+  transition:all var(--dur-slow) var(--ease-out)}
 .toast.in{opacity:1;transform:none}
-.toast.err{border-color:rgba(224,107,94,.45);color:var(--danger)}
-.toast.ok{border-color:rgba(111,182,138,.42);color:var(--success)}
+.toast.err{border-color:var(--danger);color:var(--danger)}
+.toast.ok{border-color:var(--success);color:var(--success)}
 
 /* ---------------- 空态 ---------------- */
-.welcome{max-width:880px;margin:0 auto;padding:56px var(--sp-6);animation:rise 320ms var(--ease-out) both}
-.welcome h1{font-size:var(--fs-h1);line-height:var(--lh-h1);letter-spacing:var(--ls-h1);margin:0 0 10px;font-weight:600}
-.welcome p{color:var(--text-2);font-size:var(--fs-body);margin:0 0 var(--sp-6);max-width:600px}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:var(--sp-3)}
+.welcome{max-width:860px;margin:0 auto;padding:52px 24px}
+.welcome h1{font-size:var(--fs-h1);font-weight:650;letter-spacing:-.02em;margin:0 0 10px;line-height:1.3}
+.welcome p{color:var(--text-2);font-size:var(--fs-body);margin:0 0 24px;max-width:620px;line-height:1.75}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
 .wcard{border-radius:var(--r-md);padding:16px;cursor:pointer;background:var(--bg-1);border:1px solid var(--line-default);
-  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out),box-shadow var(--dur-base)}
+  transition:transform var(--dur-base) var(--ease-out),border-color var(--dur-base),box-shadow var(--dur-base)}
 .wcard:hover{transform:translateY(-2px);border-color:var(--line-strong);box-shadow:var(--shadow-md)}
-.wcard b{display:block;font-size:var(--fs-h6);margin-bottom:5px}
-.wcard span{font-size:var(--fs-cap);color:var(--text-3);line-height:1.6}
+.wcard b{display:flex;align-items:center;gap:8px;font-size:var(--fs-h6);margin-bottom:6px}
+.wcard span{font-size:var(--fs-cap);color:var(--text-3);line-height:1.65}
 
-/* ---------------- 提及 ---------------- */
+/* 提及 */
 .rel{position:relative}
-.mention-pop{position:absolute;bottom:calc(100% + 10px);left:0;z-index:8;min-width:240px;max-height:240px;overflow-y:auto;
+.mention-pop{position:absolute;bottom:calc(100% + 10px);left:0;z-index:8;min-width:250px;max-height:250px;overflow-y:auto;
   background:var(--bg-1);border:1px solid var(--line-strong);border-radius:var(--r-md);padding:6px;box-shadow:var(--shadow-lg);
   animation:rise 180ms var(--ease-out) both}
-.mention-pop .mi{display:flex;align-items:center;gap:9px;height:34px;padding:0 9px;border-radius:var(--r-xs);cursor:pointer;transition:background var(--dur-quick)}
-.mention-pop .mi:hover{background:rgba(201,164,92,.12)}
+.mention-pop .mi{display:flex;align-items:center;gap:9px;height:36px;padding:0 9px;border-radius:var(--r-xs);cursor:pointer;transition:background var(--dur-quick)}
+.mention-pop .mi:hover{background:var(--accent-soft)}
 .mention-pop .mi-n{font-size:var(--fs-cap)}
 
-/* ---------------- 移动端 ---------------- */
+/* =======================================================================
+ * 移动端
+ * ===================================================================== */
 @media (max-width:639px){
-  :root{--font-scale:1.04;--radius-scale:1.1;--sp-5:16px;--sp-6:16px}
-  .side{position:fixed;left:0;top:0;bottom:0;z-index:60;width:288px;min-width:288px;
-        transform:translateX(-100%);transition:transform var(--dur-slow) var(--ease-out);margin-left:0!important}
+  :root{--font-scale:1.03;--radius-scale:1.05;--glass-blur:18px}
+  .side{position:fixed;left:0;top:0;bottom:0;z-index:60;width:290px;min-width:290px;margin-left:0!important;
+    border-right:1px solid var(--line-default);box-shadow:24px 0 60px rgba(0,0,0,.55);
+    transform:translateX(-100%);transition:transform var(--dur-slow) var(--ease-out)}
   .app .side.open{transform:none}
   .app.collapsed .side{margin-left:0;transform:translateX(-100%)}
-  .side-mask{display:block;position:fixed;inset:0;z-index:59;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity var(--dur-slow)}
+  .side-mask{display:block;position:fixed;inset:0;z-index:59;background:var(--scrim);opacity:0;pointer-events:none;
+    transition:opacity var(--dur-slow) var(--ease-out)}
   .app.side-open .side-mask{opacity:1;pointer-events:auto}
-  .top{height:52px;min-height:52px;padding:0 10px}
+  .side-head{padding:16px 14px 12px}
+  .agent-item,.topic-item{height:48px}
+  .topic-item{height:44px}
+  .side-foot button{height:48px}
+  .icon-btn{width:40px;height:40px}
+  .btn{height:38px;padding:0 13px}
+  .btn.sm{height:30px}
+  .top{height:52px;min-height:52px;padding:0 8px;gap:6px}
   .top-info .t2{display:none}
-  .icon-btn{width:44px;height:44px}
-  .btn{height:40px;padding:0 12px}
-  .btn.sm{height:32px}
   .top-actions .btn{display:none}
-  .top-actions .btn.pri{display:inline-flex}
-  .msgs{padding:16px 16px 8px}
-  .msg{margin-bottom:16px}
-  .msg .bd{max-width:86%}
+  .top-actions .btn.keep{display:inline-flex}
+  .av{width:26px;height:26px;border-radius:8px}
+  .av.lg{width:32px;height:32px;font-size:15px}
+  .msgs{padding:16px 14px 24px;max-width:100%}
+  .msg{gap:9px;margin-bottom:16px}
+  .msg .bd{max-width:calc(100% - 40px)}
   .msg.user .bd{max-width:86%}
-  .composer{padding:0 12px calc(12px + env(safe-area-inset-bottom))}
-  .cbox textarea{font-size:16px}
-  .tabbar{
-    display:flex;height:calc(56px + env(safe-area-inset-bottom));
-    padding-bottom:env(safe-area-inset-bottom);
-    background:var(--bg-1);border-top:1px solid var(--line-default);flex:0 0 auto;
-    box-shadow:0 -8px 24px rgba(0,0,0,.28);
-  }
-  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-       color:var(--text-3);font-size:10px;position:relative;transition:color var(--dur-base)}
-  .tab i{font-style:normal;font-size:22px;line-height:1}
-  .tab.on{color:var(--accent)}
-  .tab.on::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:22px;height:2px;border-radius:2px;background:var(--gold-grad-matte)}
-  .bubble{left:auto;right:0;bottom:calc(100% + 12px);max-width:min(78vw,320px)}
-  .bubble.open{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));top:auto;width:auto;max-width:none;
-    border-radius:var(--r-xl) var(--r-xl) 0 0;max-height:72vh;overflow-y:auto;z-index:75;
-    padding-bottom:env(safe-area-inset-bottom)}
-  .bubble.open .bub-body{max-height:none}
-  .bubble.open .bub-head::after{content:"";position:absolute;left:50%;transform:translateX(-50%);top:6px;width:36px;height:4px;border-radius:2px;background:var(--line-strong)}
+  .msg.user .prose{padding:10px 13px;border-radius:var(--r-md);border-bottom-right-radius:var(--r-xs)}
+  .prose{font-size:14.5px;line-height:1.78}
+  .ops{max-width:100%}
+  .op .oh{min-height:44px;padding:0 12px}
+  .op .ob .prose{font-size:12.5px}
+  .doc-card{max-width:100%}
+  .drawer{width:100vw;border-left:0}
+  .drawer-body{padding:20px 16px 80px}
   .docs{flex-direction:column}
-  .docs-list{width:100%;min-width:0;max-height:42vh;border-right:0;border-bottom:1px solid var(--line-subtle)}
-  .drawer{width:100vw}
-  .drawer-body{padding:20px 16px 60px}
-  .doc-area textarea{padding:20px 16px}
-  .page{padding:20px 16px 70px}
-  .card{padding:16px}
-  .dlg{max-width:none;border-radius:var(--r-xl) var(--r-xl) 0 0;align-self:flex-end}
-  .mask{align-items:flex-end;padding:0}
+  .docs-list{width:100%;min-width:0;max-height:38vh;border-right:0;border-bottom:1px solid var(--line-subtle);padding:10px}
+  .doc-area textarea{padding:18px 14px}
+  .doc-bar{padding:0 12px;gap:8px}
+  .page{padding:18px 14px 80px}
+  .card{padding:16px;border-radius:var(--r-md)}
   .emoji-grid{grid-template-columns:repeat(7,1fr)}
+  .tabs button{padding:9px 11px;font-size:var(--fs-cap)}
+  .mask{align-items:flex-end;padding:0}
+  .dlg{max-width:none;border-radius:var(--r-xl) var(--r-xl) 0 0;max-height:88vh;padding:20px 18px calc(20px + env(safe-area-inset-bottom))}
+  .welcome{padding:32px 16px}
+
+  /* 输入区：固定底栏 + 安全区 */
+  .composer{padding:0 12px calc(10px + env(safe-area-inset-bottom))}
+  .cbox{padding:3px 6px 3px 12px;border-radius:var(--r-md)}
+  .cbox textarea{font-size:16px;min-height:40px;padding:10px 0}
+  .crow .icon-btn{width:38px;height:38px;font-size:16px}
+  .send{width:38px;height:38px}
+  .hint{display:none}
+  .attach{height:56px;max-width:200px}
+  .attach img{width:42px;height:42px}
+
+  /* 统计气泡 → 底部弹层 */
+  .bubble{left:auto;right:0;bottom:calc(100% + 10px);max-width:min(76vw,300px)}
+  .bubble.open{position:fixed;top:auto;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));
+    width:auto;max-width:none;border-radius:var(--r-xl) var(--r-xl) 0 0;max-height:74vh;overflow-y:auto;z-index:75}
+  .bubble.open::after{content:"";position:absolute;left:50%;transform:translateX(-50%);top:7px;width:38px;height:4px;
+    border-radius:2px;background:var(--line-strong)}
+  .bubble.open .bub-head{height:52px;padding-top:8px}
+  .bubble.open .bub-body{max-height:none}
+  .bub-grid{grid-template-columns:1fr 1fr}
+
+  /* 底部导航 */
+  .tabbar{display:flex;height:calc(56px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);
+    background:var(--bg-1);border-top:1px solid var(--line-default);flex:0 0 auto;box-shadow:0 -8px 24px rgba(0,0,0,.28)}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    color:var(--text-3);font-size:10px;position:relative;transition:color var(--dur-base) var(--ease-out)}
+  .tab i{font-style:normal;font-size:21px;line-height:1}
+  .tab.on{color:var(--brand-200)}
+  .tab.on::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:2px;
+    border-radius:2px;background:var(--brand-grad)}
 }
-@media (min-width:640px) and (max-width:1023px){
-  .side{width:240px;min-width:240px}
-}
-@media (min-width:1440px){
-  .msgs,.composer-in{max-width:960px}
-}
+@media (min-width:640px) and (max-width:1023px){.side{width:244px;min-width:244px}}
+@media (min-width:1440px){.msgs,.composer-in{max-width:960px}}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   .aurora i{animation:none}
+}
+
+/* =======================================================================
+ * 打磨层
+ * ===================================================================== */
+[data-theme="dark"]{--text-3:#848EAA}
+[data-theme="light"]{--text-3:#7E88A3}
+.side-foot button{font-size:12.5px}
+.side-label{font-size:10px;letter-spacing:.14em}
+.op{border-color:var(--line-default)}
+.doc-bar .kv,.drawer-head .kv{white-space:nowrap}
+.bub-orb{box-shadow:0 0 12px rgba(124,108,255,.85)}
+
+@media (max-width:639px){
+  .top{height:54px;min-height:54px;padding:0 12px;gap:8px}
+  .top .icon-btn{width:38px;height:38px}
+  .top-info .t1 b{font-size:14.5px}
+
+  .msgs{padding:14px 14px 18px}
+  .msg{margin-bottom:18px}
+  .msg .hd{margin-bottom:6px}
+
+  .composer{padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
+  .cbox{border-radius:20px;padding:3px 7px 3px 14px}
+  .crow{gap:2px}
+
+  .tab{gap:4px;font-size:10.5px}
+  .tab i{font-size:20px}
+  .tab.on{color:#C6CAFF}
+  .tab.on::before{width:20px;height:2.5px}
+  .tabbar{backdrop-filter:none}
+
+  .op{border-radius:15px}
+  .op .oh{padding:0 12px}
+  .card{border-radius:16px;padding:16px 14px}
+  .page h2{font-size:19px}
+  .page{padding:16px 12px 84px}
+  .doc-card{border-radius:13px;padding:10px 12px}
+  .bub-grid{gap:6px}
+  .bub-stat{padding:8px}
+  .bub-stat b{font-size:15px}
+  .thin-hide{display:none}
 }
 
 </style>
@@ -707,7 +757,7 @@ html[data-glass="0"] .bubble{background:var(--bg-1);backdrop-filter:none}
 <div class="toasts" id="toasts"></div>
 <script>
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  核心逻辑（Part 1 / 3）
+ * LUCIFER · 多智能体中枢  ——  核心逻辑（Part 1 / 4）
  * ===================================================================== */
 
 /* ------------------------- 基础工具 ------------------------- */
@@ -817,15 +867,16 @@ const PRESETS = [
   { id: 'custom', name: '自定义地址', baseUrl: '', hint: '' },
 ];
 
-/* 主题预设（主色相 h / 饱和 s / 明度 l） */
+/* 主题预设（主色相 h / 饱和 s / 明度 l）—— 默认靛紫，与第一版配色一致 */
 const THEMES = [
-  { id: 'gold',   name: '鎏金', h: 40, s: '50%', l: '58%' },
-  { id: 'bronze', name: '青铜', h: 28, s: '38%', l: '52%' },
-  { id: 'champ',  name: '香槟', h: 46, s: '42%', l: '66%' },
-  { id: 'indigo', name: '靛青', h: 232, s: '62%', l: '64%' },
-  { id: 'jade',   name: '青玉', h: 165, s: '46%', l: '52%' },
-  { id: 'rose',   name: '玫瑰', h: 348, s: '52%', l: '62%' },
-  { id: 'steel',  name: '冷灰', h: 210, s: '16%', l: '62%' },
+  { id: 'indigo', name: '靛紫', h: 248, s: '100%', l: '71%' },
+  { id: 'violet', name: '紫罗兰', h: 268, s: '88%', l: '70%' },
+  { id: 'azure',  name: '天青', h: 212, s: '90%', l: '66%' },
+  { id: 'cyan',   name: '碧青', h: 186, s: '82%', l: '60%' },
+  { id: 'jade',   name: '青玉', h: 158, s: '62%', l: '56%' },
+  { id: 'rose',   name: '玫瑰', h: 340, s: '82%', l: '68%' },
+  { id: 'amber',  name: '琥珀', h: 34,  s: '78%', l: '62%' },
+  { id: 'gold',   name: '鎏金', h: 40,  s: '50%', l: '58%' },
 ];
 const EMOJIS = ['🧠','🤖','👨‍💻','👩‍💻','🕵️','📚','🔬','✍️','🎨','🎬','🎵','⚙️','🛠️','📊','🧩','🗂️','📝','🌐','🚀','🛡️','🧪','💡','🧭','🎯','🐧','🐳','☁️','🔮','🦾','🪄'];
 
@@ -860,10 +911,12 @@ function defaultState() {
       activeProviderId: pid,
       defaultModel: 'deepseek-chat',
       sandbox: { endpoint: '', apiKey: '', enabled: false, provider: 'e2b', lastOk: 0, note: '' },
+      search: { provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 },
+      github: { token: '', user: '', enabled: false, lastOk: 0, defaultPrivate: true },
       maxRounds: 6,
       theme: {
-        mode: 'dark', preset: 'gold', h: 40, s: '50%', l: '58%',
-        radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false,
+        mode: 'dark', preset: 'indigo', h: 248, s: '100%', l: '71%',
+        radius: 1, fontScale: 1, glassBlur: 22, aurora: true, custom: false,
       },
     },
     agents: [{
@@ -881,6 +934,7 @@ function defaultState() {
       view: 'chat', activeAgentId: 'main', activeTopicId: null, editAgentId: null,
       editTab: 'base', activeDocId: null, collapsed: false, drafting: '', statsOpen: false, _q: '',
       sideOpen: false, search: '', searchScope: 'all', tab: 'chat', docView: null,
+      pending: [], gh: { repo: null, path: null, tab: 'repos', runs: [], repos: [] },
     },
   };
 }
@@ -910,6 +964,8 @@ function load() {
     o.topics = Array.isArray(o.topics) ? o.topics : [];
     o.ui = Object.assign(d.ui, o.ui || {});
     o.settings.theme = Object.assign(d.settings.theme, (o.settings || {}).theme || {});
+    o.settings.search = Object.assign(d.settings.search, (o.settings || {}).search || {});
+    o.settings.github = Object.assign(d.settings.github, (o.settings || {}).github || {});
     if (!o.agents.some((a) => a.isMain)) o.agents.unshift(d.agents[0]);
     o.agents.forEach((a) => {
       a.skills = a.skills || [];
@@ -1087,6 +1143,9 @@ async function streamChat(agent, messages, onDelta, signal, onUsage) {
 
 /* ------------------------- 指令解析 ------------------------- */
 const RE_CALL = /<call\s+agent\s*=\s*["']([^"']+)["']\s*>([\s\S]*?)<\/call>/g;
+const RE_SANDBOX = /<sandbox(?:\s+lang\s*=\s*["']([^"']+)["'])?\s*>([\s\S]*?)<\/sandbox>/g;
+const RE_SEARCH = /<search(?:\s+count\s*=\s*["'](\d+)["'])?\s*>([\s\S]*?)<\/search>/g;
+const RE_GH = /<gh\s+([^>]*?)(?:\/>|>([\s\S]*?)<\/gh>)/g;
 const RE_DOC = /<doc\s+op\s*=\s*["']([^"']+)["']\s*([^>]*?)(?:\/>|>([\s\S]*?)<\/doc>)/g;
 
 function extractDirectives(text) {
@@ -1099,12 +1158,26 @@ function extractDirectives(text) {
     const title = (attrs.match(/title\s*=\s*["']([^"']*)["']/) || [])[1] || '';
     ops.push({ type: 'doc', op: (m[1] || '').toLowerCase(), title: title.trim(), content: (m[3] || '').trim(), index: m.index });
   }
+  RE_SANDBOX.lastIndex = 0;
+  while ((m = RE_SANDBOX.exec(text))) ops.push({ type: 'sandbox', lang: m[1] || 'python', code: m[2].trim(), index: m.index });
+  RE_SEARCH.lastIndex = 0;
+  while ((m = RE_SEARCH.exec(text))) ops.push({ type: 'search', count: m[1] ? +m[1] : 0, query: m[2].trim(), index: m.index });
+  RE_GH.lastIndex = 0;
+  while ((m = RE_GH.exec(text))) {
+    const a = m[1] || '';
+    const g = (k) => (a.match(new RegExp(k + '\\s*=\\s*["\']([^"\']*)["\']')) || [])[1] || '';
+    ops.push({ type: 'gh', op: g('op') || 'list', repo: g('repo'), path: g('path'), name: g('name'), branch: g('branch') || 'main', message: g('message') || g('msg'), workflow: g('workflow'), priv: g('private'), content: (m[2] || '').trim(), index: m.index });
+  }
   ops.sort((a, b) => a.index - b.index);
   return ops;
 }
 function stripDirectives(text) {
-  RE_CALL.lastIndex = 0; RE_DOC.lastIndex = 0;
-  return String(text).replace(RE_CALL, '').replace(RE_DOC, '').replace(/\n{3,}/g, '\n\n').trim();
+  RE_CALL.lastIndex = 0; RE_DOC.lastIndex = 0; RE_SANDBOX.lastIndex = 0;
+  RE_SEARCH.lastIndex = 0; RE_GH.lastIndex = 0;
+  return String(text)
+    .replace(RE_CALL, '').replace(RE_DOC, '').replace(RE_SANDBOX, '')
+    .replace(RE_SEARCH, '').replace(RE_GH, '')
+    .replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /* ------------------------- 提示词拼装 ------------------------- */
@@ -1128,15 +1201,34 @@ function buildSystem(agent) {
     parts.push('\n\n【团队文档库】以下文档你可以直接阅读，无需额外请求：\n\n' + rich +
       '\n\n若需要某篇的完整正文，用 <doc op="read" title="标题"/>；查看全部标题用 <doc op="list"/>。');
   }
-  parts.push(S.settings.sandbox && S.settings.sandbox.enabled
-    ? '\n\n【云沙盒】已配置：' + S.settings.sandbox.provider + ' @ ' + S.settings.sandbox.endpoint
-    : '\n\n【云沙盒】未配置（由使用者自行添加，当前不可用）。');
+  const rl = [];
+  const sb = S.settings.sandbox || {};
+  const se = S.settings.search || {};
+  const gh = S.settings.github || {};
+  if (sb.enabled && sb.endpoint) {
+    rl.push('- 云沙盒（可执行代码）：\n  <sandbox>print("hello")</sandbox>\n  支持 Python（默认）与 shell，返回 stdout/stderr。');
+  }
+  if (se.enabled && se.provider !== 'none') {
+    rl.push('- 联网检索：\n  <search>要查的关键词</search>\n  返回标题 / 链接 / 摘要，可用于查最新资料。');
+  }
+  if (gh.enabled && gh.token) {
+    rl.push('- GitHub 仓库操作（当前账号 @' + (gh.user || '未知') + '）：\n' +
+      '  <gh op="list" repo="owner/name"/>  列出仓库根目录文件\n' +
+      '  <gh op="read" repo="owner/name" path="src/a.js"/>  读取文件\n' +
+      '  <gh op="write" repo="owner/name" path="docs/x.md" message="docs: 更新">文件内容</gh>  写入并提交\n' +
+      '  <gh op="create" name="my-repo" private="true">仓库描述</gh>  新建仓库\n' +
+      '  <gh op="runs" repo="owner/name"/>  查看最近的 CI 运行\n' +
+      '  <gh op="run" repo="owner/name" workflow="ci.yml"/>  触发 CI');
+  }
+  parts.push(rl.length
+    ? '\n\n【可用工具】你可以直接使用以下工具，写指令即可，前端会执行并把结果回传：\n' + rl.join('\n')
+    : '\n\n【可用工具】当前未启用任何工具（云沙盒 / 联网检索 / GitHub 均未配置或未开启）。');
   return parts.join('');
 }
 function apiMessages(agent, topic, maxHist) {
   const sys = { role: 'system', content: buildSystem(agent) };
   const hist = topic.messages.filter((m) => m.role === 'user' || m.role === 'assistant').slice(-(maxHist || 24));
-  return [sys].concat(hist.map((m) => ({ role: m.role, content: m.content || '' })));
+  return [sys].concat(hist.map((m) => ({ role: m.role, content: toApiContent(m) })));
 }
 
 /* ------------------------- 文档操作 ------------------------- */
@@ -1218,7 +1310,7 @@ async function fetchSkill(url) {
 
 
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 3）
+ * LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 4）
  * ===================================================================== */
 
 /* ------------------------- 头像 ------------------------- */
@@ -1247,7 +1339,7 @@ function renderShell() {
   '<aside class="side' + (S.ui.sideOpen ? ' open' : '') + '">' +
     '<div class="side-head">' +
       '<div class="logo">' + STAR_SVG + '</div>' +
-      '<div class="brand"><b class="gold-text">晨星</b><span>LUCIFER ' + VERSION + '</span></div>' +
+      '<div class="brand"><b class="brand-text">LUCIFER</b><span>多智能体中枢 ' + VERSION + '</span></div>' +
     '</div>' +
     '<div class="side-search"><input id="agentSearch" placeholder="搜索会话 / Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
     '<div class="side-scroll">' +
@@ -1258,6 +1350,7 @@ function renderShell() {
     '<div class="side-foot">' +
       '<button data-act="goto-search"><span class="ico">⌕</span><span>历史检索</span></button>' +
       '<button data-act="goto-docs"><span class="ico">▤</span><span>文档库</span></button>' +
+      '<button data-act="goto-github"><span class="ico">⑂</span><span>GitHub</span>' + (S.settings.github.user ? '<span class="badge">@' + esc(S.settings.github.user) + '</span>' : '') + '</button>' +
       '<button data-act="goto-settings"><span class="ico">⚙</span><span>设置</span></button>' +
     '</div>' +
   '</aside>' +
@@ -1309,6 +1402,7 @@ function renderView() {
   else if (v === 'settings') renderSettings();
   else if (v === 'agent') renderAgentEdit();
   else if (v === 'search') renderSearch();
+  else if (v === 'github') renderGithub();
   else renderChat();
   const tb = document.getElementById('tabbar');
   if (tb) Array.from(tb.querySelectorAll('.tab')).forEach((x) => x.classList.toggle('on', x.dataset.tab === (v === 'chat' ? 'chat' : v)));
@@ -1324,7 +1418,7 @@ function msgHTML(m, agent) {
         '<div class="ob"><div class="prose">' + mdRender(m.content) + '</div></div></div></div>';
     }
     return '<div class="msg user">' + avatarHTML({ avatar: '🙋' }) +
-      '<div class="bd"><div class="prose">' + mdRender(m.content) + '</div></div></div>';
+      '<div class="bd">' + mediaHTML(m) + '<div class="prose">' + mdRender(m.content) + '</div></div></div>';
   }
   const ops = (m.ops || []).map((o, i) => opHTML(o, i)).join('');
   const dchips = docChipsFor(m);
@@ -1347,6 +1441,10 @@ function opHTML(o, i) {
       '<div class="ob"><div class="kv">任务</div><div class="prose">' + mdRender(o.task) + '</div>' +
       '<div class="kv mt">回执</div><div class="prose">' + (o.result ? mdRender(o.result) : '<span class="spin"></span>') + '</div></div></div>';
   }
+  if (o.type === 'sandbox') return toolOpHTML(i, '⌘', '沙盒执行 · ' + esc(o.lang || 'python'),
+    '```' + (o.lang || 'python') + '\n' + (o.code || '').slice(0, 2000) + '\n```\n\n**输出**\n' + (o.result || '_执行中…_'), o);
+  if (o.type === 'search') return toolOpHTML(i, '⌕', '联网检索 · ' + esc(o.query), o.result || '', o);
+  if (o.type === 'gh') return toolOpHTML(i, '⑂', 'GitHub · ' + esc(o.op) + (o.repo ? ' ' + esc(o.repo) : ''), o.result || (o.content || '').slice(0, 800), o);
   const label = ({ create: '创建', append: '追加', update: '更新', read: '读取', list: '列举', delete: '删除' })[o.op] || o.op;
   const doc = o.title ? findDoc(o.title) : null;
   const openBtn = doc
@@ -1405,14 +1503,18 @@ function renderChat() {
     '<div class="scroll" id="msgs"><div class="msgs">' + inner + '</div></div>' +
     '<div class="composer"><div class="composer-in">' +
       statsBubbleHTML(topic) +
+      pendingHTML() +
       '<div class="cbox glass">' +
         '<textarea id="input" rows="1" placeholder="给 ' + esc(a.name) + ' 发消息…"></textarea>' +
         '<div class="crow">' +
-          '<button class="icon-btn" data-act="evac" title="召集全员协作">⚡</button>' +
+          '<button class="icon-btn" data-act="attach" title="添加图片 / 文件">⊕</button>' +
+          '<button class="icon-btn' + (S.settings.sandbox.enabled ? ' on' : '') + '" data-act="evac" title="召集全员协作">⚡</button>' +
           '<button class="icon-btn" data-act="mention" title="提及 Agent">@</button>' +
           '<button class="send" data-act="send" title="发送">➤</button>' +
         '</div>' +
       '</div>' +
+      '<div class="drop-hint">松开即添加图片或文件</div>' +
+      '<input type="file" id="fileInput" multiple hidden accept="image/*,.txt,.md,.json,.js,.ts,.py,.html,.css,.csv,.yml,.yaml,.log">' +
       '<div class="hint">' +
         '<span>Enter 发送 · Shift+Enter 换行</span>' +
         '<button class="hint-toggle" data-act="toggle-syntax">指令语法 <i>⌃</i></button>' +
@@ -1420,7 +1522,16 @@ function renderChat() {
           (a.tools.delegate ? '<span>派发 <code>&lt;call agent="@角色名"&gt;…&lt;/call&gt;</code></span>' : '') +
           (a.tools.docs ? '<span>文档 <code>&lt;doc op="create" title="…"&gt;…&lt;/doc&gt;</code></span>' : '') +
         '</span>' +
-        '<span style="margin-left:auto">' + (S.settings.sandbox.enabled ? '云沙盒已连接' : '云沙盒未配置') + '</span>' +
+        '<span class="hint-syn">' +
+          (S.settings.sandbox.enabled ? '<span>沙盒 <code>&lt;sandbox&gt;…&lt;/sandbox&gt;</code></span>' : '') +
+          (S.settings.search.enabled ? '<span>检索 <code>&lt;search&gt;…&lt;/search&gt;</code></span>' : '') +
+          (S.settings.github.enabled ? '<span>GitHub <code>&lt;gh op="write" …&gt;</code></span>' : '') +
+        '</span>' +
+        '<span style="margin-left:auto">' +
+          (S.settings.sandbox.enabled ? '沙盒✓' : '沙盒✗') + ' · ' +
+          (S.settings.search.enabled ? '检索✓' : '检索✗') + ' · ' +
+          (S.settings.github.enabled ? 'GitHub✓' : 'GitHub✗') +
+        '</span>' +
       '</div>' +
     '</div></div>';
   bindChat();
@@ -1444,6 +1555,22 @@ function bindChat() {
   ta.value = S.ui.drafting || '';
   autoGrow(ta);
   ta.addEventListener('input', () => { S.ui.drafting = ta.value; autoGrow(ta); hideMention(); });
+  ta.addEventListener('paste', (ev) => {
+    const files = Array.from((ev.clipboardData && ev.clipboardData.files) || []);
+    if (files.length) { ev.preventDefault(); addFiles(files); }
+  });
+  const fi = $('#fileInput');
+  if (fi) fi.addEventListener('change', () => { addFiles(Array.from(fi.files || [])); fi.value = ''; });
+  const box = document.querySelector('.composer');
+  if (box && !box.dataset.dnd) {
+    box.dataset.dnd = '1';
+    box.addEventListener('dragover', (ev) => { ev.preventDefault(); box.classList.add('dragging'); });
+    box.addEventListener('dragleave', () => box.classList.remove('dragging'));
+    box.addEventListener('drop', (ev) => {
+      ev.preventDefault(); box.classList.remove('dragging');
+      addFiles(Array.from((ev.dataTransfer && ev.dataTransfer.files) || []));
+    });
+  }
   ta.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); }
   });
@@ -1500,7 +1627,9 @@ async function runTurn(userText) {
   const agent = curAgent();
   const topic = ensureTopic(agent.id);
   if (topic.messages.length === 0) topic.title = userText.slice(0, 18);
-  topic.messages.push({ role: 'user', content: userText, ts: now(), by: agent.id });
+  const atts = (S.ui.pending || []).slice();
+  S.ui.pending = [];
+  topic.messages.push({ role: 'user', content: userText, ts: now(), by: agent.id, attachments: atts });
   save();
   renderChat();
 
@@ -1546,11 +1675,18 @@ async function runTurn(userText) {
 
       for (let i = 0; i < ops.length; i++) {
         const o = ops[i];
-        if (o.type === 'doc') {
-          const r = execDocOp(o);
-          o.result = r; o.status = 'done';
+        if (o.type !== 'call') {
+          let r;
+          try { r = await execToolOp(o); o.status = 'done'; }
+          catch (err) { r = '执行失败：' + (err.message || err); o.status = 'error'; }
+          o.result = r;
           opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
-          results.push('【文档操作结果】' + o.op + ' 「' + o.title + '」→ ' + r);
+          const tag = o.type === 'doc' ? '文档 ' + o.op + (o.title ? '「' + o.title + '」' : '')
+            : o.type === 'sandbox' ? '沙盒执行'
+            : o.type === 'search' ? '联网检索「' + o.query + '」'
+            : o.type === 'gh' ? 'GitHub ' + o.op + (o.repo ? ' ' + o.repo : '')
+            : o.type;
+          results.push('【工具执行结果 · ' + tag + '】\n' + String(r).slice(0, 6000));
           save();
         } else {
           const key = String(o.agent).replace(/^@/, '');
@@ -1750,7 +1886,9 @@ function renderSettings() {
   const ps = S.settings.providers;
   const ap = getProvider(S.settings.activeProviderId) || ps[0];
   const sb = S.settings.sandbox;
-  const th = Object.assign({ mode: 'dark', preset: 'gold', radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false }, S.settings.theme || {});
+  const th = Object.assign({ mode: 'dark', preset: 'indigo', radius: 1, fontScale: 1, glassBlur: 22, aurora: true, custom: false }, S.settings.theme || {});
+  const se = Object.assign({ provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 }, S.settings.search || {});
+  const gh = Object.assign({ token: '', user: '', enabled: false, lastOk: 0 }, S.settings.github || {});
   $('#body').innerHTML =
   '<div class="scroll"><div class="page">' +
     '<h2>设置</h2>' +
@@ -1811,7 +1949,30 @@ function renderSettings() {
       '<div class="row mt"><button class="btn fix" data-act="resetTheme">恢复默认外观</button></div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>④ 数据</h3>' +
+    '<div class="card glass"><h3>④ 联网检索</h3>' +
+      '<div class="fld"><label>检索服务商</label><select id="seProvider">' +
+        [['none', '不启用'], ['searxng', 'SearXNG（自建实例 · 免费）'], ['tavily', 'Tavily API'], ['brave', 'Brave Search API'], ['serper', 'Serper (Google)']]
+          .map(([k, n]) => '<option value="' + k + '"' + (se.provider === k ? ' selected' : '') + '>' + n + '</option>').join('') +
+      '</select><div class="hint2">SearXNG 填实例地址；Tavily / Brave / Serper 填各自的 API Key。</div></div>' +
+      '<div class="fld"><label>地址 或 API Key</label><input id="seEndpoint" value="' + esc(se.endpoint) + '" placeholder="https://searx.example.com  或  tvly-xxxx"></div>' +
+      '<div class="fld"><label>每次返回条数</label><input id="seCount" type="number" min="1" max="20" value="' + (se.count || 5) + '"></div>' +
+      '<div class="switch"><div><div class="lbl">启用联网检索</div><div class="dsc">开启后 Agent 可用 &lt;search&gt;关键词&lt;/search&gt; 查资料</div></div>' +
+        '<div class="tgl' + (se.enabled ? ' on' : '') + '" data-tgl-search="1"></div></div>' +
+      '<div class="row mt"><button class="btn pri fix" data-act="search-test">测试检索</button>' +
+        '<span class="kv">' + (se.lastOk ? '上次成功：' + relTime(se.lastOk) : '尚未测试') + '</span></div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>⑤ GitHub</h3>' +
+      '<div class="fld"><label>Personal Access Token</label><input id="ghToken" type="password" value="' + esc(gh.token) + '" placeholder="ghp_… / github_pat_…"></div>' +
+      '<div class="switch"><div><div class="lbl">启用 GitHub 工具</div><div class="dsc">Agent 可创建仓库、提交文件、读取代码、触发 CI</div></div>' +
+        '<div class="tgl' + (gh.enabled ? ' on' : '') + '" data-tgl-gh="1"></div></div>' +
+      '<div class="row mt"><button class="btn pri fix" data-act="gh-connect">连接并读取账号</button>' +
+        '<button class="btn fix" data-act="goto-github">打开 GitHub 面板</button>' +
+        '<span class="kv">' + (gh.user ? '已连接：@' + esc(gh.user) : '未连接') + '</span></div>' +
+      '<div class="hint2 mt">Token 仅存本机 localStorage。需要权限：<code>repo</code>（读写仓库）、<code>workflow</code>（触发 / 查看 Actions）。</div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>⑥ 数据</h3>' +
       '<div class="sub" style="margin:0 0 12px">Agent ' + S.agents.length + ' 个 · 文档 ' + S.docs.length + ' 篇 · 会话 ' + S.topics.length + ' 个</div>' +
       '<div class="row">' +
         '<button class="btn fix" data-act="exportData">导出全部数据 (JSON)</button>' +
@@ -1834,7 +1995,7 @@ function renderSettings() {
     if (!p.baseUrl && p.hint) toast(p.name + '：' + p.hint, '');
     else if (!p.baseUrl) toast('请在下方填入 ' + p.name + ' 的 API 地址', '');
   });
-  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey'].forEach((sel) => {
+  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
     const e = $(sel); if (e) e.addEventListener('change', () => { persistCfg(); save(); });
   });
 }
@@ -1849,6 +2010,12 @@ function persistCfg() {
   }
   if ($('#cfgDefault')) S.settings.defaultModel = $('#cfgDefault').value;
   if ($('#cfgRounds')) S.settings.maxRounds = Math.max(1, Math.min(12, parseInt($('#cfgRounds').value, 10) || 6));
+  const se = S.settings.search || (S.settings.search = {});
+  if ($('#seProvider')) se.provider = $('#seProvider').value;
+  if ($('#seEndpoint')) se.endpoint = $('#seEndpoint').value.trim();
+  if ($('#seCount')) se.count = Math.max(1, Math.min(20, parseInt($('#seCount').value, 10) || 5));
+  const ghc = S.settings.github || (S.settings.github = {});
+  if ($('#ghToken')) ghc.token = $('#ghToken').value.trim();
   const sb = S.settings.sandbox;
   if ($('#sbProvider')) sb.provider = $('#sbProvider').value;
   if ($('#sbEndpoint')) sb.endpoint = $('#sbEndpoint').value.trim();
@@ -1936,6 +2103,10 @@ function wireGlobal() {
     const mi = t.closest('[data-mention]');
     if (mi) return;
 
+    const tSe = t.closest('[data-tgl-search]');
+    if (tSe) { S.settings.search.enabled = !S.settings.search.enabled; save(); renderSettings(); return; }
+    const tGh = t.closest('[data-tgl-gh]');
+    if (tGh) { S.settings.github.enabled = !S.settings.github.enabled; save(); renderSettings(); return; }
     const tMode = t.closest('[data-theme-mode]');
     if (tMode) { S.settings.theme.mode = tMode.dataset.themeMode; applyTheme(); save(); renderSettings(); return; }
     const tglTh = t.closest('[data-tgl-theme]');
@@ -2018,6 +2189,21 @@ function saveDocIfDirty() {
 async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
+    case 'goto-github': { S.ui.view = 'github'; S.ui.gh = S.ui.gh || {}; closeSideMobile(); save(); renderShell(); if (S.settings.github.token) ghLoadRepos(); return; }
+    case 'attach': { const f = $('#fileInput'); if (f) f.click(); return; }
+    case 'rmattach': { removePending(+e.target.closest('[data-i]').dataset.i); return; }
+    case 'export-zip': { await exportTopicZip(e); return; }
+    case 'search-test': { await testSearch(e); return; }
+    case 'gh-connect': { await ghConnect(e); return; }
+    case 'gh-newrepo': { openNewRepoDialog(); return; }
+    case 'gh-open': { await ghOpenRepo(e.target.closest('[data-repo]').dataset.repo); return; }
+    case 'gh-repos': { S.ui.gh.repo = null; renderGithub(); return; }
+    case 'gh-file': { await ghOpenFile(e.target.closest('[data-path]').dataset.path); return; }
+    case 'gh-save': { await ghSaveFile(e); return; }
+    case 'gh-refresh-runs': { await ghLoadRuns(S.ui.gh.repo); return; }
+    case 'gh-run-wf': { await ghTriggerWorkflow(e); return; }
+    case 'gh-close-file': { S.ui.gh.path = null; S.ui.gh.file = null; renderGithub(); return; }
+    case 'lightbox': { openLightbox(e.target.src); return; }
     case 'goto-search': { S.ui.view = 'search'; closeSideMobile(); save(); renderShell(); setTimeout(() => { const i = $('#q'); if (i) i.focus(); }, 30); return; }
     case 'viewdoc': { openDocDrawer(e && e.target && e.target.closest('[data-id]') ? e.target.closest('[data-id]').dataset.id : S.ui.activeDocId); return; }
     case 'closedoc': { closeDocDrawer(); return; }
@@ -2345,11 +2531,11 @@ function boot() {
 
 
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  新增能力（Part 3 / 3）
+ * LUCIFER · 多智能体中枢  ——  主题 / 会话 / 检索 / 文档 / 沙盒（Part 3 / 4）
  * 主题引擎 / 会话列表 / 全文检索 / 对话内文档浏览 / 云沙盒 / 移动端
  * ===================================================================== */
 
-const VERSION = 'v1.0';
+const VERSION = 'v2.0';
 const STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
   '<defs><linearGradient id="starG" x1="3" y1="2" x2="21" y2="22">' +
   '<stop offset="0" stop-color="#8C6E33"/><stop offset=".5" stop-color="#E7D4A4"/><stop offset="1" stop-color="#A8823D"/>' +
@@ -2417,7 +2603,7 @@ function renderTopicList() {
 /* ------------------------- 底部导航（移动端） ------------------------- */
 function renderTabbar() {
   const el = document.getElementById('tabbar'); if (!el) return;
-  const items = [['chat', '对话', '◆'], ['search', '检索', '⌕'], ['docs', '文档', '▤'], ['settings', '设置', '⚙']];
+  const items = [['chat', '对话', '◆'], ['search', '检索', '⌕'], ['docs', '文档', '▤'], ['github', 'GitHub', '⑂'], ['settings', '设置', '⚙']];
   el.innerHTML = items.map(([k, n, i]) =>
     '<button class="tab' + (S.ui.view === k ? ' on' : '') + '" data-act="goto-' + k + '"><i>' + i + '</i>' + n + '</button>').join('');
 }
@@ -2612,7 +2798,7 @@ async function testSandbox(e) {
   if (btn) { btn.disabled = true; btn.textContent = '测试中…'; }
   try {
     const sid = await sandboxCreate();
-    const r = await sandboxRun('print("hello from 晨星")', sid);
+    const r = await sandboxRun('print("hello from LUCIFER")', sid);
     await sbFetch('/sandboxes/' + sid, { method: 'DELETE' }).catch(() => {});
     S.settings.sandbox.lastOk = now();
     S.settings.sandbox.enabled = true;
@@ -2626,7 +2812,586 @@ async function testSandbox(e) {
 }
 window.CX = { sandboxRun, sandboxCreate, state: () => S };
 
-/* ------------------------- 启动 ------------------------- */
+/* 启动由 Part 4 末尾负责 */
+
+
+/* =======================================================================
+ * LUCIFER · 多智能体中枢  ——  工具与集成（Part 4 / 4）
+ * 云沙盒工具 / 联网检索 / 会话 ZIP 导出 / 图片与文件 / GitHub 集成
+ * ===================================================================== */
+
+const TOOL_VERSION = 'v2.0';
+
+/* ------------------------- 附件 ------------------------- */
+const readAsDataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+const readAsText = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(f); });
+function fmtSize(n) { n = n || 0; return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB'; }
+
+function pendingHTML() {
+  const p = S.ui.pending || [];
+  if (!p.length) return '';
+  return '<div class="attach-row">' + p.map((a, i) =>
+    '<div class="attach">' +
+      (a.kind === 'image' ? '<img src="' + esc(a.data) + '" alt="">' : '<i style="color:var(--accent)">▤</i>') +
+      '<span class="an">' + esc(a.name) + '</span>' +
+      '<button class="ax" data-act="rmattach" data-i="' + i + '" title="移除">✕</button>' +
+    '</div>').join('') + '</div>';
+}
+function removePending(i) { (S.ui.pending || []).splice(i, 1); save(); renderChat(); }
+
+async function addFiles(files) {
+  if (!files || !files.length) return;
+  let n = 0;
+  for (const f of files) {
+    if (f.size > 5 * 1024 * 1024) { toast(f.name + ' 超过 5MB，已跳过', 'err'); continue; }
+    const isImg = /^image\//.test(f.type);
+    if (isImg) {
+      S.ui.pending.push({ id: uid('at'), kind: 'image', name: f.name, mime: f.type, size: f.size, data: await readAsDataURL(f) });
+    } else {
+      const looksText = /^(text\/|application\/(json|javascript|xml|x-yaml))/.test(f.type) ||
+        /\.(txt|md|json|js|mjs|ts|tsx|jsx|py|html|css|scss|csv|yml|yaml|log|sh|toml|ini|sql|java|go|rs|c|cpp|h)$/i.test(f.name);
+      let text = '';
+      if (looksText && f.size < 400 * 1024) text = (await readAsText(f)).slice(0, 80000);
+      S.ui.pending.push({ id: uid('at'), kind: 'file', name: f.name, mime: f.type, size: f.size, text });
+    }
+    n++;
+  }
+  if (n) { save(); renderChat(); toast('已添加 ' + n + ' 个附件'); }
+}
+
+function mediaHTML(m) {
+  const atts = (m && m.attachments) || [];
+  if (!atts.length) return '';
+  const imgs = atts.filter((a) => a.kind === 'image');
+  const files = atts.filter((a) => a.kind === 'file');
+  let h = '';
+  if (imgs.length) h += '<div class="msg-imgs">' + imgs.map((a) =>
+    '<img class="msg-img" src="' + esc(a.data) + '" data-act="lightbox" alt="' + esc(a.name) + '">').join('') + '</div>';
+  if (files.length) h += '<div class="msg-files">' + files.map((a) =>
+    '<span class="file-chip"><i>▤</i>' + esc(a.name) + '<span class="kv">' + fmtSize(a.size) + '</span></span>').join('') + '</div>';
+  return h;
+}
+
+/* 把带附件的消息转成 API 的 content（多模态） */
+function toApiContent(m) {
+  const atts = (m && m.attachments) || [];
+  if (!atts.length) return m.content || '';
+  let text = m.content || '';
+  const fileTexts = atts.filter((a) => a.kind === 'file' && a.text)
+    .map((a) => '【附件 ' + a.name + '】\n' + a.text);
+  if (fileTexts.length) text = (text ? text + '\n\n' : '') + fileTexts.join('\n\n');
+  const imgs = atts.filter((a) => a.kind === 'image');
+  const parts = [];
+  if (text) parts.push({ type: 'text', text });
+  imgs.forEach((a) => parts.push({ type: 'image_url', image_url: { url: a.data } }));
+  if (!parts.length) return m.content || '';
+  return parts.length === 1 && parts[0].type === 'text' ? parts[0].text : parts;
+}
+
+function openLightbox(src) {
+  const el = document.createElement('div');
+  el.className = 'lightbox';
+  el.innerHTML = '<img src="' + esc(src) + '" alt="">';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('in'));
+  const close = () => { el.classList.remove('in'); setTimeout(() => el.remove(), 220); };
+  el.addEventListener('click', close);
+  document.addEventListener('keydown', function esc2(ev) { if (ev.key === 'Escape') { close(); document.removeEventListener('keydown', esc2); } });
+}
+
+/* ------------------------- 云沙盒工具 ------------------------- */
+async function toolSandbox(op) {
+  const sb = S.settings.sandbox || {};
+  if (!sb.enabled || !sb.endpoint) throw new Error('云沙盒未启用或未配置 Endpoint');
+  const lang = (op.lang || 'python').toLowerCase();
+  let code = op.code;
+  if (lang === 'shell' || lang === 'bash' || lang === 'sh') code = 'import subprocess\nprint(subprocess.run(' + JSON.stringify(op.code) + ', shell=True, capture_output=True, text=True).stdout)';
+  const r = await sandboxRun(code);
+  let out = '【沙盒执行完成】\n';
+  if (r.out) out += r.out;
+  if (r.err) out += '\n[stderr]\n' + r.err;
+  if (!r.out && !r.err) out += '（无输出）';
+  return out;
+}
+
+/* ------------------------- 联网检索 ------------------------- */
+function searchCfg() { return Object.assign({ provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 }, S.settings.search || {}); }
+
+async function webSearch(query, count) {
+  const se = searchCfg();
+  if (!se.enabled || se.provider === 'none') throw new Error('未启用联网检索（设置 → ④ 联网检索）');
+  const n = Math.max(1, Math.min(20, count || se.count || 5));
+  const ep = (se.endpoint || '').trim();
+  if (!ep) throw new Error('未填写检索地址 / API Key');
+  const norm = (arr, tf) => (arr || []).slice(0, n).map(tf).filter((x) => x && x.url);
+
+  if (se.provider === 'searxng') {
+    const u = ep.replace(/\/+$/, '') + '/search?format=json&language=zh-CN&safesearch=0&q=' + encodeURIComponent(query);
+    const r = await fetch(u);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    return norm(j.results, (x) => ({ title: x.title, url: x.url, snippet: x.content || '' }));
+  }
+  if (se.provider === 'tavily') {
+    const r = await fetch('https://api.tavily.com/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: ep, query, max_results: n, search_depth: 'basic' }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || j.message || ('HTTP ' + r.status));
+    return norm(j.results, (x) => ({ title: x.title, url: x.url, snippet: x.content || '' }));
+  }
+  if (se.provider === 'brave') {
+    const r = await fetch('https://api.search.brave.com/res/v1/web/search?count=' + n + '&q=' + encodeURIComponent(query),
+      { headers: { 'Accept': 'application/json', 'X-Subscription-Token': ep } });
+    const j = await r.json();
+    if (!r.ok) throw new Error((j.error && j.error.detail) || ('HTTP ' + r.status));
+    return norm(j.web && j.web.results, (x) => ({ title: x.title, url: x.url, snippet: x.description || '' }));
+  }
+  if (se.provider === 'serper') {
+    const r = await fetch('https://google.serper.dev/search', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-KEY': ep }, body: JSON.stringify({ q: query, num: n }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.message || ('HTTP ' + r.status));
+    return norm(j.organic, (x) => ({ title: x.title, url: x.link, snippet: x.snippet || '' }));
+  }
+  throw new Error('未知的检索服务商：' + se.provider);
+}
+
+async function testSearch(e) {
+  persistCfg();
+  const btn = e && e.target && e.target.closest('[data-act="search-test"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '检索中…'; }
+  try {
+    const rs = await webSearch('LobeHub 多智能体', 3);
+    S.settings.search.lastOk = now(); save();
+    toast('检索连通 ✓ 返回 ' + rs.length + ' 条：' + (rs[0] ? rs[0].title.slice(0, 24) : ''), 'ok');
+    if (S.ui.view === 'settings') renderSettings();
+  } catch (err) {
+    toast('检索失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '测试检索'; }
+}
+
+function toolSearch(op) {
+  return webSearch(op.query, op.count).then((rs) => {
+    if (!rs.length) return '【检索「' + op.query + '」】没有找到结果。';
+    return '【检索「' + op.query + '」共 ' + rs.length + ' 条】\n' +
+      rs.map((x, i) => (i + 1) + '. ' + x.title + '\n   ' + x.url + '\n   ' + (x.snippet || '').replace(/\s+/g, ' ').slice(0, 220)).join('\n');
+  });
+}
+
+/* ------------------------- ZIP（纯 JS，store 模式） ------------------------- */
+const CRC_T = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; } return t; })();
+function crc32(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) c = CRC_T[(c ^ buf[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+function zipStore(entries) {
+  const enc = new TextEncoder();
+  const chunks = [], central = [];
+  let offset = 0;
+  const d = new Date();
+  const dosTime = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF;
+  const dosDate = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+  for (const e of entries) {
+    const nameB = enc.encode(e.name);
+    const data = typeof e.data === 'string' ? enc.encode(e.data) : e.data;
+    const crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint16(8, 0, true); lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, nameB.length, true); lh.setUint16(28, 0, true);
+    chunks.push(new Uint8Array(lh.buffer), nameB, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, dosTime, true);
+    ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true);
+    ch.setUint32(24, data.length, true); ch.setUint16(28, nameB.length, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), nameB);
+    offset += 30 + nameB.length + data.length;
+  }
+  let cdSize = 0; central.forEach((c) => { cdSize += c.length; });
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob(chunks.concat(central, [new Uint8Array(end.buffer)]), { type: 'application/zip' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function safeName(s) { return String(s || '').replace(/[\\/:*?"<>|\r\n\t]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 60) || 'untitled'; }
+
+async function exportTopicZip(e) {
+  const btn = e && e.target && e.target.closest('[data-act="export-zip"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '打包中…'; }
+  try {
+    const a = curAgent();
+    const t = ensureTopic(a.id);
+    const stamp = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const dateStr = stamp.getFullYear() + pad(stamp.getMonth() + 1) + pad(stamp.getDate()) + '-' + pad(stamp.getHours()) + pad(stamp.getMinutes());
+    const st = t.stats || {};
+    const usedDocs = [];
+    (t.messages || []).forEach((m) => (m.ops || []).forEach((o) => {
+      if (o.type === 'doc' && o.title) { const d = findDoc(o.title); if (d && !usedDocs.some((x) => x.id === d.id)) usedDocs.push(d); }
+    }));
+
+    /* 可读转录 */
+    const md = ['# ' + (t.title || '会话') , '',
+      '- Agent：' + a.name + ' (@' + a.roleName + ')',
+      '- 创建时间：' + fmtTime(t.createdAt || now()),
+      '- 消息数：' + (t.messages || []).length,
+      '- Token：' + fmtNum(st.totalTokens || 0) + '（输入 ' + fmtNum(st.promptTokens || 0) + ' / 输出 ' + fmtNum(st.completionTokens || 0) + '）',
+      '- 请求次数：' + (st.requests || 0),
+      '', '---', ''];
+    (t.messages || []).forEach((m, i) => {
+      const who = m._synthetic ? '系统回执' : m.role === 'user' ? '👤 用户' : '🤖 ' + a.name;
+      md.push('## ' + (i + 1) + '. ' + who + (m.ts ? '　' + fmtTime(m.ts) : ''));
+      if ((m.attachments || []).length) {
+        md.push('', '> 附件：' + m.attachments.map((x) => x.name + '（' + (x.kind === 'image' ? '图片' : '文件') + '）').join('、'));
+      }
+      md.push('', m.content || '（无正文）', '');
+      (m.ops || []).forEach((o) => {
+        md.push('### 工具调用 · ' + (o.type === 'call' ? '派发 ' + o.agent : o.type === 'doc' ? '文档 ' + o.op + (o.title ? '「' + o.title + '」' : '') : o.type));
+        if (o.task) md.push('', '**任务**：' + o.task);
+        if (o.result) md.push('', '**回执**：', '', '```', String(o.result).slice(0, 4000), '```');
+        md.push('');
+      });
+      md.push('---', '');
+    });
+
+    const manifest = {
+      app: 'LUCIFER', version: TOOL_VERSION, exportedAt: new Date().toISOString(),
+      agent: { name: a.name, role: a.roleName, model: modelFor(a), provider: (providerFor(a) || {}).name },
+      topic: { id: t.id, title: t.title, createdAt: t.createdAt, stats: st, messages: t.messages },
+      docs: usedDocs.map((d) => ({ id: d.id, title: d.title, updatedAt: d.updatedAt, content: d.content })),
+    };
+
+    const entries = [
+      { name: 'README.md', data: md.join('\n') },
+      { name: 'conversation.json', data: JSON.stringify(t.messages || [], null, 2) },
+      { name: 'manifest.json', data: JSON.stringify(manifest, null, 2) },
+    ];
+    usedDocs.forEach((d) => entries.push({ name: 'docs/' + safeName(d.title) + '.md', data: d.content || '' }));
+    (t.messages || []).forEach((m, i) => {
+      (m.attachments || []).forEach((att, j) => {
+        if (att.kind === 'image' && att.data && att.data.indexOf('base64,') > 0) {
+          const b64 = att.data.split('base64,')[1];
+          const bin = atob(b64); const u8 = new Uint8Array(bin.length);
+          for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+          entries.push({ name: 'attachments/' + pad(i + 1) + '-' + (j + 1) + '-' + safeName(att.name), data: u8 });
+        } else if (att.text) {
+          entries.push({ name: 'attachments/' + pad(i + 1) + '-' + (j + 1) + '-' + safeName(att.name), data: att.text });
+        }
+      });
+    });
+
+    downloadBlob(zipStore(entries), safeName((t.title || 'conversation')) + '-' + dateStr + '.zip');
+    toast('已导出 ZIP：' + entries.length + ' 个文件', 'ok');
+  } catch (err) {
+    toast('导出失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '导出会话 ZIP'; }
+}
+
+/* ------------------------- GitHub 集成 ------------------------- */
+function ghCfg() { return Object.assign({ token: '', user: '', enabled: false, lastOk: 0 }, S.settings.github || {}); }
+function ghState() { if (!S.ui.gh) S.ui.gh = { repo: null, path: null, tab: 'repos', runs: [], repos: [] }; return S.ui.gh; }
+
+async function ghFetch(path, opt) {
+  const gh = ghCfg();
+  if (!gh.token) throw new Error('未配置 GitHub Token');
+  const r = await fetch('https://api.github.com' + path, Object.assign({}, opt || {}, {
+    headers: Object.assign({
+      'Accept': 'application/vnd.github+json',
+      'Authorization': 'Bearer ' + gh.token,
+      'X-GitHub-Api-Version': '2022-11-28',
+    }, (opt && opt.headers) || {}),
+  }));
+  const txt = await r.text();
+  let j = null; try { j = JSON.parse(txt); } catch (err) {}
+  if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status + ' ' + txt.slice(0, 140)));
+  return j;
+}
+function b64d(b64) { const bin = atob(String(b64 || '').replace(/\s/g, '')); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new TextDecoder().decode(u8); }
+function b64e(str) { const u8 = new TextEncoder().encode(str); let bin = ''; for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]); return btoa(bin); }
+
+async function ghConnect(e) {
+  persistCfg();
+  const btn = e && e.target && e.target.closest('[data-act="gh-connect"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '连接中…'; }
+  try {
+    const me = await ghFetch('/user');
+    S.settings.github.user = me.login;
+    S.settings.github.enabled = true;
+    S.settings.github.lastOk = now();
+    save();
+    toast('已连接 GitHub：@' + me.login, 'ok');
+    if (S.ui.view === 'settings') renderSettings(); else renderShell();
+  } catch (err) {
+    toast('GitHub 连接失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '连接并读取账号'; }
+}
+
+async function ghLoadRepos() {
+  const g = ghState();
+  try {
+    const rs = await ghFetch('/user/repos?sort=updated&per_page=60&affiliation=owner,collaborator');
+    g.repos = rs.map((r) => ({ full: r.full_name, name: r.name, private: r.private, desc: r.description, url: r.html_url, branch: r.default_branch, updated: r.updated_at }));
+    if (S.ui.view === 'github') renderGithub();
+  } catch (err) {
+    toast('拉取仓库失败：' + (err.message || err), 'err');
+  }
+}
+
+async function ghOpenRepo(full) {
+  const g = ghState();
+  g.repo = full; g.path = null; g.file = null; g.tab = 'files'; g.tree = null; g.runs = [];
+  renderGithub();
+  try {
+    const info = await ghFetch('/repos/' + full);
+    g.info = { branch: info.default_branch, private: info.private, desc: info.description, url: info.html_url };
+    const tree = await ghFetch('/repos/' + full + '/contents/?ref=' + (info.default_branch || 'main'));
+    g.tree = Array.isArray(tree) ? tree : [];
+    renderGithub();
+    ghLoadRuns(full);
+  } catch (err) {
+    toast('读取仓库失败：' + (err.message || err), 'err');
+  }
+}
+
+async function ghOpenFile(path) {
+  const g = ghState();
+  try {
+    const f = await ghFetch('/repos/' + g.repo + '/contents/' + path.split('/').map(encodeURIComponent).join('/'));
+    g.path = path; g.file = { sha: f.sha, content: b64d(f.content), size: f.size };
+    renderGithub();
+  } catch (err) {
+    toast('读取文件失败：' + (err.message || err), 'err');
+  }
+}
+
+async function ghSaveFile(e) {
+  const g = ghState();
+  const area = document.getElementById('ghEditor');
+  if (!area || !g.repo || !g.path) return;
+  const btn = e && e.target && e.target.closest('[data-act="gh-save"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '提交中…'; }
+  try {
+    const body = {
+      message: (document.getElementById('ghMsg') || {}).value || ('update ' + g.path),
+      content: b64e(area.value),
+      branch: (g.info && g.info.branch) || 'main',
+    };
+    if (g.file && g.file.sha) body.sha = g.file.sha;
+    const r = await ghFetch('/repos/' + g.repo + '/contents/' + g.path.split('/').map(encodeURIComponent).join('/'), {
+      method: 'PUT', body: JSON.stringify(body),
+    });
+    g.file.sha = r.content && r.content.sha;
+    g.file.content = area.value;
+    toast('已提交 ✓ ' + (r.commit && r.commit.sha ? r.commit.sha.slice(0, 7) : ''), 'ok');
+  } catch (err) {
+    toast('提交失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '提交到仓库'; }
+}
+
+async function ghLoadRuns(repo) {
+  const g = ghState();
+  try {
+    const r = await ghFetch('/repos/' + (repo || g.repo) + '/actions/runs?per_page=10');
+    g.runs = (r.workflow_runs || []).map((x) => ({ id: x.id, name: x.name, status: x.status, conclusion: x.conclusion, branch: x.head_branch, event: x.event, url: x.html_url, at: x.created_at }));
+    if (S.ui.view === 'github') renderGithub();
+  } catch (err) {
+    g.runs = [];
+    if (S.ui.view === 'github') renderGithub();
+  }
+}
+
+async function ghTriggerWorkflow(e) {
+  const g = ghState();
+  const sel = document.getElementById('ghWf');
+  const wf = sel ? sel.value : '';
+  if (!wf) { toast('请先填写 workflow 文件名', 'err'); return; }
+  const btn = e && e.target && e.target.closest('[data-act="gh-run-wf"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '触发中…'; }
+  try {
+    await ghFetch('/repos/' + g.repo + '/actions/workflows/' + encodeURIComponent(wf) + '/dispatches', {
+      method: 'POST', body: JSON.stringify({ ref: (g.info && g.info.branch) || 'main' }),
+    });
+    toast('已触发 CI：' + wf + '（约 10 秒后刷新可见）', 'ok');
+    setTimeout(() => ghLoadRuns(g.repo), 6000);
+  } catch (err) {
+    toast('触发失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '触发 CI'; }
+}
+
+/* Agent 可调用的 GitHub 指令 */
+async function ghOp(o) {
+  const g = ghState();
+  const repo = o.repo || g.repo;
+  switch (o.op) {
+    case 'list': {
+      const t = await ghFetch('/repos/' + repo + '/contents/');
+      return '【' + repo + ' 根目录】\n' + (Array.isArray(t) ? t.map((x) => (x.type === 'dir' ? '📁 ' : '📄 ') + x.name).join('\n') : '（空）');
+    }
+    case 'read': {
+      const f = await ghFetch('/repos/' + repo + '/contents/' + o.path);
+      return '【' + repo + '/' + o.path + '】\n' + b64d(f.content).slice(0, 8000);
+    }
+    case 'write': {
+      let sha;
+      try { const cur = await ghFetch('/repos/' + repo + '/contents/' + o.path); sha = cur.sha; } catch (e) {}
+      const body = { message: o.message || ('chore: update ' + o.path), content: b64e(o.content || ''), branch: o.branch || 'main' };
+      if (sha) body.sha = sha;
+      const r = await ghFetch('/repos/' + repo + '/contents/' + o.path, { method: 'PUT', body: JSON.stringify(body) });
+      return '已提交 ' + repo + '/' + o.path + '（' + (r.commit ? r.commit.sha.slice(0, 7) : '') + '）';
+    }
+    case 'create': {
+      const r = await ghFetch('/user/repos', { method: 'POST', body: JSON.stringify({ name: o.name, description: (o.content || '').slice(0, 300), private: String(o.priv) !== 'false', auto_init: true }) });
+      S.settings.github.lastOk = now(); save();
+      return '已创建仓库 ' + r.full_name + '（' + (r.private ? '私有' : '公开') + '） ' + r.html_url;
+    }
+    case 'runs': {
+      const r = await ghFetch('/repos/' + repo + '/actions/runs?per_page=6');
+      const list = (r.workflow_runs || []);
+      return '【最近 CI 运行】\n' + (list.length ? list.map((x) => '- ' + x.name + ' · ' + x.status + (x.conclusion ? ' / ' + x.conclusion : '') + ' · ' + x.head_branch + ' · ' + x.created_at).join('\n') : '（没有运行记录）');
+    }
+    case 'run': {
+      await ghFetch('/repos/' + repo + '/actions/workflows/' + encodeURIComponent(o.workflow) + '/dispatches', { method: 'POST', body: JSON.stringify({ ref: o.branch || 'main' }) });
+      return '已触发 workflow ' + o.workflow + '（ref=' + (o.branch || 'main') + '）';
+    }
+    default: return '不支持的 GitHub 操作：' + o.op;
+  }
+}
+
+/* ------------------------- 工具指令统一分发 ------------------------- */
+async function execToolOp(o) {
+  if (o.type === 'doc') return execDocOp(o);
+  if (o.type === 'sandbox') return toolSandbox(o);
+  if (o.type === 'search') return toolSearch(o);
+  if (o.type === 'gh') return ghOp(o);
+  return '未知指令类型：' + o.type;
+}
+
+/* ------------------------- GitHub 视图 ------------------------- */
+function concludeTag(run) {
+  if (run.status !== 'completed') return '<span class="tag warn">' + (run.status === 'in_progress' ? '运行中' : run.status) + '</span>';
+  return run.conclusion === 'success' ? '<span class="tag ok">成功</span>' : '<span class="tag err">' + (run.conclusion || '失败') + '</span>';
+}
+
+function renderGithub() {
+  const gh = ghCfg();
+  const g = ghState();
+  const body = document.getElementById('body');
+  if (!body) return;
+  if (!gh.token) {
+    body.innerHTML = '<div class="scroll"><div class="page"><h2>GitHub</h2>' +
+      '<div class="sub">让 Agent 帮你建仓库、提交代码、跑 CI。先在设置里填 Personal Access Token。</div>' +
+      '<div class="empty">还没有配置 Token<br><br><button class="btn pri" data-act="goto-settings">去设置</button></div></div></div>';
+    return;
+  }
+  const repos = (g.repos || []).map((r) =>
+    '<div class="gh-repo" data-repo="' + esc(r.full) + '" data-act="gh-open">' +
+      '<span style="font-size:16px">' + (r.private ? '🔒' : '📖') + '</span>' +
+      '<div style="flex:1;min-width:0"><div class="rn">' + esc(r.full) + '</div>' +
+      '<div class="rd">' + esc(r.desc || '（无描述）') + ' · ' + esc(r.branch || 'main') + '</div></div>' +
+      '<span class="kv">' + (r.updated ? r.updated.slice(0, 10) : '') + '</span>' +
+    '</div>').join('');
+
+  let detail = '';
+  if (g.repo) {
+    const files = (g.tree || []).map((f) =>
+      '<div class="gh-file" data-path="' + esc(f.path) + '" data-act="gh-file">' + (f.type === 'dir' ? '📁' : '📄') + ' ' + esc(f.name) + '</div>').join('');
+    const runs = (g.runs || []).map((r) =>
+      '<div class="gh-file" style="cursor:default">' + concludeTag(r) +
+      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.name || '') + '</span>' +
+      '<span class="kv">' + esc(r.branch || '') + ' · ' + (r.at ? r.at.slice(5, 16).replace('T', ' ') : '') + '</span>' +
+      (r.url ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" style="font-size:11px">详情</a>' : '') + '</div>').join('');
+
+    let editor = '';
+    if (g.path) {
+      editor = '<div class="card"><h3>✎ ' + esc(g.path) + ' <span class="kv">' + fmtSize((g.file && g.file.size) || 0) + '</span>' +
+        '<span class="spacer"></span><button class="btn sm" data-act="gh-close-file">关闭</button></h3>' +
+        '<div class="fld"><label>提交信息</label><input id="ghMsg" value="update ' + esc(g.path) + '"></div>' +
+        '<div class="fld"><textarea id="ghEditor" rows="16" spellcheck="false">' + esc((g.file && g.file.content) || '') + '</textarea></div>' +
+        '<div class="row"><button class="btn pri fix" data-act="gh-save">提交到仓库</button></div></div>';
+    }
+
+    detail = '<div class="card"><h3>' + (g.info && g.info.private ? '🔒 ' : '📖 ') + esc(g.repo) +
+        '<span class="spacer"></span><button class="btn sm" data-act="gh-repos">← 返回仓库列表</button></h3>' +
+        '<div class="sub" style="margin:0 0 12px">' + esc((g.info && g.info.desc) || '') +
+        (g.info && g.info.url ? ' · <a href="' + esc(g.info.url) + '" target="_blank" rel="noopener">在 GitHub 打开</a>' : '') + '</div>' +
+        (files ? '<div class="fld"><label>仓库文件（根目录）</label>' + files + '</div>' : '<div class="kv">加载中…</div>') +
+      '</div>' +
+      editor +
+      '<div class="card"><h3>Actions / CI</h3>' +
+        '<div class="row"><input id="ghWf" class="fix" style="flex:1" placeholder="workflow 文件名，如 ci.yml">' +
+        '<button class="btn pri fix" data-act="gh-run-wf">触发 CI</button>' +
+        '<button class="btn fix" data-act="gh-refresh-runs">刷新</button></div>' +
+        '<div class="mt">' + (runs || '<div class="kv">还没有运行记录</div>') + '</div>' +
+      '</div>';
+  }
+
+  body.innerHTML = '<div class="scroll"><div class="page">' +
+    '<h2>GitHub</h2>' +
+    '<div class="sub">已连接 <b style="color:var(--accent)">@' + esc(gh.user || '未知') + '</b>' +
+      (gh.lastOk ? ' · ' + relTime(gh.lastOk) : '') + '</div>' +
+    (g.repo ? detail :
+      '<div class="row" style="margin-bottom:14px"><button class="btn pri fix" data-act="gh-newrepo">＋ 新建仓库</button>' +
+      '<button class="btn fix" data-act="gh-repos" style="display:none"></button>' +
+      '<span class="kv">共 ' + (g.repos || []).length + ' 个仓库</span></div>' +
+      (repos || '<div class="empty">还没有仓库，点上方「新建仓库」，或让 Agent 用 &lt;gh op="create"&gt; 创建</div>')) +
+  '</div></div>';
+}
+
+function openNewRepoDialog() {
+  modal('<h3>新建 GitHub 仓库</h3><div class="dsc">会在你的账号下创建，默认勾选自动初始化 README。</div>' +
+    '<div class="fld"><label>仓库名</label><input id="nrName" placeholder="my-project"></div>' +
+    '<div class="fld"><label>描述</label><input id="nrDesc" placeholder="可选"></div>' +
+    '<div class="switch"><div><div class="lbl">私有仓库</div><div class="dsc">建议个人项目保持私有</div></div>' +
+      '<div class="tgl on" data-nr-priv="1"></div></div>' +
+    '<div class="act"><button class="btn" data-x="c">取消</button><button class="btn pri" data-x="ok">创建</button></div>',
+    (m, close) => {
+      let priv = true;
+      m.addEventListener('click', async (ev) => {
+        const tgl = ev.target.closest('[data-nr-priv]');
+        if (tgl) { priv = !priv; tgl.classList.toggle('on', priv); return; }
+        const x = ev.target.closest('[data-x]'); if (!x) return;
+        if (x.dataset.x === 'ok') {
+          const name = ($('#nrName', m).value || '').trim();
+          if (!name) { toast('请填仓库名', 'err'); return; }
+          try {
+            const r = await ghFetch('/user/repos', { method: 'POST', body: JSON.stringify({ name, description: ($('#nrDesc', m).value || '').trim(), private: priv, auto_init: true }) });
+            toast('已创建 ' + r.full_name, 'ok');
+            close(); await ghLoadRepos(); ghOpenRepo(r.full_name);
+          } catch (err) { toast('创建失败：' + (err.message || err), 'err'); }
+          return;
+        }
+        close();
+      });
+    });
+}
+
+/* 工具类指令卡片的渲染 */
+function toolOpHTML(i, icon, title, body, o) {
+  const st = o.status === 'running' ? '<span class="tag warn">进行中</span>'
+    : o.status === 'error' ? '<span class="tag err">失败</span>' : '<span class="tag ok">已执行</span>';
+  return '<div class="op' + (o.status === 'error' ? ' open' : '') + '" data-op="' + i + '">' +
+    '<div class="oh"><span class="oi">' + icon + '</span><span class="ttl">' + title + '</span>' + st +
+    '<span class="chev">⌄</span></div>' +
+    '<div class="ob"><div class="prose">' + (body ? mdRender(body) : '<span class="kv">（无输出）</span>') + '</div></div></div>';
+}
+
+/* ------------------------- 启动（必须放在最后） ------------------------- */
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();
 

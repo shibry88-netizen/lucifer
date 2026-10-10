@@ -1,5 +1,5 @@
 /* 晨星 · LUCIFER —— 离线外壳缓存 */
-const CACHE = 'lucifer-v1.0.0';
+const CACHE = 'lucifer-v2.0.0';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

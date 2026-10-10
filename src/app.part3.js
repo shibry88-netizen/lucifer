@@ -1,9 +1,9 @@
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  新增能力（Part 3 / 3）
+ * LUCIFER · 多智能体中枢  ——  主题 / 会话 / 检索 / 文档 / 沙盒（Part 3 / 4）
  * 主题引擎 / 会话列表 / 全文检索 / 对话内文档浏览 / 云沙盒 / 移动端
  * ===================================================================== */
 
-const VERSION = 'v1.0';
+const VERSION = 'v2.0';
 const STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
   '<defs><linearGradient id="starG" x1="3" y1="2" x2="21" y2="22">' +
   '<stop offset="0" stop-color="#8C6E33"/><stop offset=".5" stop-color="#E7D4A4"/><stop offset="1" stop-color="#A8823D"/>' +
@@ -71,7 +71,7 @@ function renderTopicList() {
 /* ------------------------- 底部导航（移动端） ------------------------- */
 function renderTabbar() {
   const el = document.getElementById('tabbar'); if (!el) return;
-  const items = [['chat', '对话', '◆'], ['search', '检索', '⌕'], ['docs', '文档', '▤'], ['settings', '设置', '⚙']];
+  const items = [['chat', '对话', '◆'], ['search', '检索', '⌕'], ['docs', '文档', '▤'], ['github', 'GitHub', '⑂'], ['settings', '设置', '⚙']];
   el.innerHTML = items.map(([k, n, i]) =>
     '<button class="tab' + (S.ui.view === k ? ' on' : '') + '" data-act="goto-' + k + '"><i>' + i + '</i>' + n + '</button>').join('');
 }
@@ -266,7 +266,7 @@ async function testSandbox(e) {
   if (btn) { btn.disabled = true; btn.textContent = '测试中…'; }
   try {
     const sid = await sandboxCreate();
-    const r = await sandboxRun('print("hello from 晨星")', sid);
+    const r = await sandboxRun('print("hello from LUCIFER")', sid);
     await sbFetch('/sandboxes/' + sid, { method: 'DELETE' }).catch(() => {});
     S.settings.sandbox.lastOk = now();
     S.settings.sandbox.enabled = true;
@@ -280,6 +280,4 @@ async function testSandbox(e) {
 }
 window.CX = { sandboxRun, sandboxCreate, state: () => S };
 
-/* ------------------------- 启动 ------------------------- */
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-else boot();
+/* 启动由 Part 4 末尾负责 */

@@ -1,5 +1,5 @@
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  核心逻辑（Part 1 / 3）
+ * LUCIFER · 多智能体中枢  ——  核心逻辑（Part 1 / 4）
  * ===================================================================== */
 
 /* ------------------------- 基础工具 ------------------------- */
@@ -109,15 +109,16 @@ const PRESETS = [
   { id: 'custom', name: '自定义地址', baseUrl: '', hint: '' },
 ];
 
-/* 主题预设（主色相 h / 饱和 s / 明度 l） */
+/* 主题预设（主色相 h / 饱和 s / 明度 l）—— 默认靛紫，与第一版配色一致 */
 const THEMES = [
-  { id: 'gold',   name: '鎏金', h: 40, s: '50%', l: '58%' },
-  { id: 'bronze', name: '青铜', h: 28, s: '38%', l: '52%' },
-  { id: 'champ',  name: '香槟', h: 46, s: '42%', l: '66%' },
-  { id: 'indigo', name: '靛青', h: 232, s: '62%', l: '64%' },
-  { id: 'jade',   name: '青玉', h: 165, s: '46%', l: '52%' },
-  { id: 'rose',   name: '玫瑰', h: 348, s: '52%', l: '62%' },
-  { id: 'steel',  name: '冷灰', h: 210, s: '16%', l: '62%' },
+  { id: 'indigo', name: '靛紫', h: 248, s: '100%', l: '71%' },
+  { id: 'violet', name: '紫罗兰', h: 268, s: '88%', l: '70%' },
+  { id: 'azure',  name: '天青', h: 212, s: '90%', l: '66%' },
+  { id: 'cyan',   name: '碧青', h: 186, s: '82%', l: '60%' },
+  { id: 'jade',   name: '青玉', h: 158, s: '62%', l: '56%' },
+  { id: 'rose',   name: '玫瑰', h: 340, s: '82%', l: '68%' },
+  { id: 'amber',  name: '琥珀', h: 34,  s: '78%', l: '62%' },
+  { id: 'gold',   name: '鎏金', h: 40,  s: '50%', l: '58%' },
 ];
 const EMOJIS = ['🧠','🤖','👨‍💻','👩‍💻','🕵️','📚','🔬','✍️','🎨','🎬','🎵','⚙️','🛠️','📊','🧩','🗂️','📝','🌐','🚀','🛡️','🧪','💡','🧭','🎯','🐧','🐳','☁️','🔮','🦾','🪄'];
 
@@ -152,10 +153,12 @@ function defaultState() {
       activeProviderId: pid,
       defaultModel: 'deepseek-chat',
       sandbox: { endpoint: '', apiKey: '', enabled: false, provider: 'e2b', lastOk: 0, note: '' },
+      search: { provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 },
+      github: { token: '', user: '', enabled: false, lastOk: 0, defaultPrivate: true },
       maxRounds: 6,
       theme: {
-        mode: 'dark', preset: 'gold', h: 40, s: '50%', l: '58%',
-        radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false,
+        mode: 'dark', preset: 'indigo', h: 248, s: '100%', l: '71%',
+        radius: 1, fontScale: 1, glassBlur: 22, aurora: true, custom: false,
       },
     },
     agents: [{
@@ -173,6 +176,7 @@ function defaultState() {
       view: 'chat', activeAgentId: 'main', activeTopicId: null, editAgentId: null,
       editTab: 'base', activeDocId: null, collapsed: false, drafting: '', statsOpen: false, _q: '',
       sideOpen: false, search: '', searchScope: 'all', tab: 'chat', docView: null,
+      pending: [], gh: { repo: null, path: null, tab: 'repos', runs: [], repos: [] },
     },
   };
 }
@@ -202,6 +206,8 @@ function load() {
     o.topics = Array.isArray(o.topics) ? o.topics : [];
     o.ui = Object.assign(d.ui, o.ui || {});
     o.settings.theme = Object.assign(d.settings.theme, (o.settings || {}).theme || {});
+    o.settings.search = Object.assign(d.settings.search, (o.settings || {}).search || {});
+    o.settings.github = Object.assign(d.settings.github, (o.settings || {}).github || {});
     if (!o.agents.some((a) => a.isMain)) o.agents.unshift(d.agents[0]);
     o.agents.forEach((a) => {
       a.skills = a.skills || [];
@@ -379,6 +385,9 @@ async function streamChat(agent, messages, onDelta, signal, onUsage) {
 
 /* ------------------------- 指令解析 ------------------------- */
 const RE_CALL = /<call\s+agent\s*=\s*["']([^"']+)["']\s*>([\s\S]*?)<\/call>/g;
+const RE_SANDBOX = /<sandbox(?:\s+lang\s*=\s*["']([^"']+)["'])?\s*>([\s\S]*?)<\/sandbox>/g;
+const RE_SEARCH = /<search(?:\s+count\s*=\s*["'](\d+)["'])?\s*>([\s\S]*?)<\/search>/g;
+const RE_GH = /<gh\s+([^>]*?)(?:\/>|>([\s\S]*?)<\/gh>)/g;
 const RE_DOC = /<doc\s+op\s*=\s*["']([^"']+)["']\s*([^>]*?)(?:\/>|>([\s\S]*?)<\/doc>)/g;
 
 function extractDirectives(text) {
@@ -391,12 +400,26 @@ function extractDirectives(text) {
     const title = (attrs.match(/title\s*=\s*["']([^"']*)["']/) || [])[1] || '';
     ops.push({ type: 'doc', op: (m[1] || '').toLowerCase(), title: title.trim(), content: (m[3] || '').trim(), index: m.index });
   }
+  RE_SANDBOX.lastIndex = 0;
+  while ((m = RE_SANDBOX.exec(text))) ops.push({ type: 'sandbox', lang: m[1] || 'python', code: m[2].trim(), index: m.index });
+  RE_SEARCH.lastIndex = 0;
+  while ((m = RE_SEARCH.exec(text))) ops.push({ type: 'search', count: m[1] ? +m[1] : 0, query: m[2].trim(), index: m.index });
+  RE_GH.lastIndex = 0;
+  while ((m = RE_GH.exec(text))) {
+    const a = m[1] || '';
+    const g = (k) => (a.match(new RegExp(k + '\\s*=\\s*["\']([^"\']*)["\']')) || [])[1] || '';
+    ops.push({ type: 'gh', op: g('op') || 'list', repo: g('repo'), path: g('path'), name: g('name'), branch: g('branch') || 'main', message: g('message') || g('msg'), workflow: g('workflow'), priv: g('private'), content: (m[2] || '').trim(), index: m.index });
+  }
   ops.sort((a, b) => a.index - b.index);
   return ops;
 }
 function stripDirectives(text) {
-  RE_CALL.lastIndex = 0; RE_DOC.lastIndex = 0;
-  return String(text).replace(RE_CALL, '').replace(RE_DOC, '').replace(/\n{3,}/g, '\n\n').trim();
+  RE_CALL.lastIndex = 0; RE_DOC.lastIndex = 0; RE_SANDBOX.lastIndex = 0;
+  RE_SEARCH.lastIndex = 0; RE_GH.lastIndex = 0;
+  return String(text)
+    .replace(RE_CALL, '').replace(RE_DOC, '').replace(RE_SANDBOX, '')
+    .replace(RE_SEARCH, '').replace(RE_GH, '')
+    .replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /* ------------------------- 提示词拼装 ------------------------- */
@@ -420,15 +443,34 @@ function buildSystem(agent) {
     parts.push('\n\n【团队文档库】以下文档你可以直接阅读，无需额外请求：\n\n' + rich +
       '\n\n若需要某篇的完整正文，用 <doc op="read" title="标题"/>；查看全部标题用 <doc op="list"/>。');
   }
-  parts.push(S.settings.sandbox && S.settings.sandbox.enabled
-    ? '\n\n【云沙盒】已配置：' + S.settings.sandbox.provider + ' @ ' + S.settings.sandbox.endpoint
-    : '\n\n【云沙盒】未配置（由使用者自行添加，当前不可用）。');
+  const rl = [];
+  const sb = S.settings.sandbox || {};
+  const se = S.settings.search || {};
+  const gh = S.settings.github || {};
+  if (sb.enabled && sb.endpoint) {
+    rl.push('- 云沙盒（可执行代码）：\n  <sandbox>print("hello")</sandbox>\n  支持 Python（默认）与 shell，返回 stdout/stderr。');
+  }
+  if (se.enabled && se.provider !== 'none') {
+    rl.push('- 联网检索：\n  <search>要查的关键词</search>\n  返回标题 / 链接 / 摘要，可用于查最新资料。');
+  }
+  if (gh.enabled && gh.token) {
+    rl.push('- GitHub 仓库操作（当前账号 @' + (gh.user || '未知') + '）：\n' +
+      '  <gh op="list" repo="owner/name"/>  列出仓库根目录文件\n' +
+      '  <gh op="read" repo="owner/name" path="src/a.js"/>  读取文件\n' +
+      '  <gh op="write" repo="owner/name" path="docs/x.md" message="docs: 更新">文件内容</gh>  写入并提交\n' +
+      '  <gh op="create" name="my-repo" private="true">仓库描述</gh>  新建仓库\n' +
+      '  <gh op="runs" repo="owner/name"/>  查看最近的 CI 运行\n' +
+      '  <gh op="run" repo="owner/name" workflow="ci.yml"/>  触发 CI');
+  }
+  parts.push(rl.length
+    ? '\n\n【可用工具】你可以直接使用以下工具，写指令即可，前端会执行并把结果回传：\n' + rl.join('\n')
+    : '\n\n【可用工具】当前未启用任何工具（云沙盒 / 联网检索 / GitHub 均未配置或未开启）。');
   return parts.join('');
 }
 function apiMessages(agent, topic, maxHist) {
   const sys = { role: 'system', content: buildSystem(agent) };
   const hist = topic.messages.filter((m) => m.role === 'user' || m.role === 'assistant').slice(-(maxHist || 24));
-  return [sys].concat(hist.map((m) => ({ role: m.role, content: m.content || '' })));
+  return [sys].concat(hist.map((m) => ({ role: m.role, content: toApiContent(m) })));
 }
 
 /* ------------------------- 文档操作 ------------------------- */

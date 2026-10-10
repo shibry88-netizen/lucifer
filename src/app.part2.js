@@ -1,5 +1,5 @@
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 3）
+ * LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 4）
  * ===================================================================== */
 
 /* ------------------------- 头像 ------------------------- */
@@ -28,7 +28,7 @@ function renderShell() {
   '<aside class="side' + (S.ui.sideOpen ? ' open' : '') + '">' +
     '<div class="side-head">' +
       '<div class="logo">' + STAR_SVG + '</div>' +
-      '<div class="brand"><b class="gold-text">晨星</b><span>LUCIFER ' + VERSION + '</span></div>' +
+      '<div class="brand"><b class="brand-text">LUCIFER</b><span>多智能体中枢 ' + VERSION + '</span></div>' +
     '</div>' +
     '<div class="side-search"><input id="agentSearch" placeholder="搜索会话 / Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
     '<div class="side-scroll">' +
@@ -39,6 +39,7 @@ function renderShell() {
     '<div class="side-foot">' +
       '<button data-act="goto-search"><span class="ico">⌕</span><span>历史检索</span></button>' +
       '<button data-act="goto-docs"><span class="ico">▤</span><span>文档库</span></button>' +
+      '<button data-act="goto-github"><span class="ico">⑂</span><span>GitHub</span>' + (S.settings.github.user ? '<span class="badge">@' + esc(S.settings.github.user) + '</span>' : '') + '</button>' +
       '<button data-act="goto-settings"><span class="ico">⚙</span><span>设置</span></button>' +
     '</div>' +
   '</aside>' +
@@ -90,6 +91,7 @@ function renderView() {
   else if (v === 'settings') renderSettings();
   else if (v === 'agent') renderAgentEdit();
   else if (v === 'search') renderSearch();
+  else if (v === 'github') renderGithub();
   else renderChat();
   const tb = document.getElementById('tabbar');
   if (tb) Array.from(tb.querySelectorAll('.tab')).forEach((x) => x.classList.toggle('on', x.dataset.tab === (v === 'chat' ? 'chat' : v)));
@@ -105,7 +107,7 @@ function msgHTML(m, agent) {
         '<div class="ob"><div class="prose">' + mdRender(m.content) + '</div></div></div></div>';
     }
     return '<div class="msg user">' + avatarHTML({ avatar: '🙋' }) +
-      '<div class="bd"><div class="prose">' + mdRender(m.content) + '</div></div></div>';
+      '<div class="bd">' + mediaHTML(m) + '<div class="prose">' + mdRender(m.content) + '</div></div></div>';
   }
   const ops = (m.ops || []).map((o, i) => opHTML(o, i)).join('');
   const dchips = docChipsFor(m);
@@ -128,6 +130,10 @@ function opHTML(o, i) {
       '<div class="ob"><div class="kv">任务</div><div class="prose">' + mdRender(o.task) + '</div>' +
       '<div class="kv mt">回执</div><div class="prose">' + (o.result ? mdRender(o.result) : '<span class="spin"></span>') + '</div></div></div>';
   }
+  if (o.type === 'sandbox') return toolOpHTML(i, '⌘', '沙盒执行 · ' + esc(o.lang || 'python'),
+    '```' + (o.lang || 'python') + '\n' + (o.code || '').slice(0, 2000) + '\n```\n\n**输出**\n' + (o.result || '_执行中…_'), o);
+  if (o.type === 'search') return toolOpHTML(i, '⌕', '联网检索 · ' + esc(o.query), o.result || '', o);
+  if (o.type === 'gh') return toolOpHTML(i, '⑂', 'GitHub · ' + esc(o.op) + (o.repo ? ' ' + esc(o.repo) : ''), o.result || (o.content || '').slice(0, 800), o);
   const label = ({ create: '创建', append: '追加', update: '更新', read: '读取', list: '列举', delete: '删除' })[o.op] || o.op;
   const doc = o.title ? findDoc(o.title) : null;
   const openBtn = doc
@@ -186,14 +192,18 @@ function renderChat() {
     '<div class="scroll" id="msgs"><div class="msgs">' + inner + '</div></div>' +
     '<div class="composer"><div class="composer-in">' +
       statsBubbleHTML(topic) +
+      pendingHTML() +
       '<div class="cbox glass">' +
         '<textarea id="input" rows="1" placeholder="给 ' + esc(a.name) + ' 发消息…"></textarea>' +
         '<div class="crow">' +
-          '<button class="icon-btn" data-act="evac" title="召集全员协作">⚡</button>' +
+          '<button class="icon-btn" data-act="attach" title="添加图片 / 文件">⊕</button>' +
+          '<button class="icon-btn' + (S.settings.sandbox.enabled ? ' on' : '') + '" data-act="evac" title="召集全员协作">⚡</button>' +
           '<button class="icon-btn" data-act="mention" title="提及 Agent">@</button>' +
           '<button class="send" data-act="send" title="发送">➤</button>' +
         '</div>' +
       '</div>' +
+      '<div class="drop-hint">松开即添加图片或文件</div>' +
+      '<input type="file" id="fileInput" multiple hidden accept="image/*,.txt,.md,.json,.js,.ts,.py,.html,.css,.csv,.yml,.yaml,.log">' +
       '<div class="hint">' +
         '<span>Enter 发送 · Shift+Enter 换行</span>' +
         '<button class="hint-toggle" data-act="toggle-syntax">指令语法 <i>⌃</i></button>' +
@@ -201,7 +211,16 @@ function renderChat() {
           (a.tools.delegate ? '<span>派发 <code>&lt;call agent="@角色名"&gt;…&lt;/call&gt;</code></span>' : '') +
           (a.tools.docs ? '<span>文档 <code>&lt;doc op="create" title="…"&gt;…&lt;/doc&gt;</code></span>' : '') +
         '</span>' +
-        '<span style="margin-left:auto">' + (S.settings.sandbox.enabled ? '云沙盒已连接' : '云沙盒未配置') + '</span>' +
+        '<span class="hint-syn">' +
+          (S.settings.sandbox.enabled ? '<span>沙盒 <code>&lt;sandbox&gt;…&lt;/sandbox&gt;</code></span>' : '') +
+          (S.settings.search.enabled ? '<span>检索 <code>&lt;search&gt;…&lt;/search&gt;</code></span>' : '') +
+          (S.settings.github.enabled ? '<span>GitHub <code>&lt;gh op="write" …&gt;</code></span>' : '') +
+        '</span>' +
+        '<span style="margin-left:auto">' +
+          (S.settings.sandbox.enabled ? '沙盒✓' : '沙盒✗') + ' · ' +
+          (S.settings.search.enabled ? '检索✓' : '检索✗') + ' · ' +
+          (S.settings.github.enabled ? 'GitHub✓' : 'GitHub✗') +
+        '</span>' +
       '</div>' +
     '</div></div>';
   bindChat();
@@ -225,6 +244,22 @@ function bindChat() {
   ta.value = S.ui.drafting || '';
   autoGrow(ta);
   ta.addEventListener('input', () => { S.ui.drafting = ta.value; autoGrow(ta); hideMention(); });
+  ta.addEventListener('paste', (ev) => {
+    const files = Array.from((ev.clipboardData && ev.clipboardData.files) || []);
+    if (files.length) { ev.preventDefault(); addFiles(files); }
+  });
+  const fi = $('#fileInput');
+  if (fi) fi.addEventListener('change', () => { addFiles(Array.from(fi.files || [])); fi.value = ''; });
+  const box = document.querySelector('.composer');
+  if (box && !box.dataset.dnd) {
+    box.dataset.dnd = '1';
+    box.addEventListener('dragover', (ev) => { ev.preventDefault(); box.classList.add('dragging'); });
+    box.addEventListener('dragleave', () => box.classList.remove('dragging'));
+    box.addEventListener('drop', (ev) => {
+      ev.preventDefault(); box.classList.remove('dragging');
+      addFiles(Array.from((ev.dataTransfer && ev.dataTransfer.files) || []));
+    });
+  }
   ta.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); }
   });
@@ -281,7 +316,9 @@ async function runTurn(userText) {
   const agent = curAgent();
   const topic = ensureTopic(agent.id);
   if (topic.messages.length === 0) topic.title = userText.slice(0, 18);
-  topic.messages.push({ role: 'user', content: userText, ts: now(), by: agent.id });
+  const atts = (S.ui.pending || []).slice();
+  S.ui.pending = [];
+  topic.messages.push({ role: 'user', content: userText, ts: now(), by: agent.id, attachments: atts });
   save();
   renderChat();
 
@@ -327,11 +364,18 @@ async function runTurn(userText) {
 
       for (let i = 0; i < ops.length; i++) {
         const o = ops[i];
-        if (o.type === 'doc') {
-          const r = execDocOp(o);
-          o.result = r; o.status = 'done';
+        if (o.type !== 'call') {
+          let r;
+          try { r = await execToolOp(o); o.status = 'done'; }
+          catch (err) { r = '执行失败：' + (err.message || err); o.status = 'error'; }
+          o.result = r;
           opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
-          results.push('【文档操作结果】' + o.op + ' 「' + o.title + '」→ ' + r);
+          const tag = o.type === 'doc' ? '文档 ' + o.op + (o.title ? '「' + o.title + '」' : '')
+            : o.type === 'sandbox' ? '沙盒执行'
+            : o.type === 'search' ? '联网检索「' + o.query + '」'
+            : o.type === 'gh' ? 'GitHub ' + o.op + (o.repo ? ' ' + o.repo : '')
+            : o.type;
+          results.push('【工具执行结果 · ' + tag + '】\n' + String(r).slice(0, 6000));
           save();
         } else {
           const key = String(o.agent).replace(/^@/, '');
@@ -531,7 +575,9 @@ function renderSettings() {
   const ps = S.settings.providers;
   const ap = getProvider(S.settings.activeProviderId) || ps[0];
   const sb = S.settings.sandbox;
-  const th = Object.assign({ mode: 'dark', preset: 'gold', radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false }, S.settings.theme || {});
+  const th = Object.assign({ mode: 'dark', preset: 'indigo', radius: 1, fontScale: 1, glassBlur: 22, aurora: true, custom: false }, S.settings.theme || {});
+  const se = Object.assign({ provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 }, S.settings.search || {});
+  const gh = Object.assign({ token: '', user: '', enabled: false, lastOk: 0 }, S.settings.github || {});
   $('#body').innerHTML =
   '<div class="scroll"><div class="page">' +
     '<h2>设置</h2>' +
@@ -592,7 +638,30 @@ function renderSettings() {
       '<div class="row mt"><button class="btn fix" data-act="resetTheme">恢复默认外观</button></div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>④ 数据</h3>' +
+    '<div class="card glass"><h3>④ 联网检索</h3>' +
+      '<div class="fld"><label>检索服务商</label><select id="seProvider">' +
+        [['none', '不启用'], ['searxng', 'SearXNG（自建实例 · 免费）'], ['tavily', 'Tavily API'], ['brave', 'Brave Search API'], ['serper', 'Serper (Google)']]
+          .map(([k, n]) => '<option value="' + k + '"' + (se.provider === k ? ' selected' : '') + '>' + n + '</option>').join('') +
+      '</select><div class="hint2">SearXNG 填实例地址；Tavily / Brave / Serper 填各自的 API Key。</div></div>' +
+      '<div class="fld"><label>地址 或 API Key</label><input id="seEndpoint" value="' + esc(se.endpoint) + '" placeholder="https://searx.example.com  或  tvly-xxxx"></div>' +
+      '<div class="fld"><label>每次返回条数</label><input id="seCount" type="number" min="1" max="20" value="' + (se.count || 5) + '"></div>' +
+      '<div class="switch"><div><div class="lbl">启用联网检索</div><div class="dsc">开启后 Agent 可用 &lt;search&gt;关键词&lt;/search&gt; 查资料</div></div>' +
+        '<div class="tgl' + (se.enabled ? ' on' : '') + '" data-tgl-search="1"></div></div>' +
+      '<div class="row mt"><button class="btn pri fix" data-act="search-test">测试检索</button>' +
+        '<span class="kv">' + (se.lastOk ? '上次成功：' + relTime(se.lastOk) : '尚未测试') + '</span></div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>⑤ GitHub</h3>' +
+      '<div class="fld"><label>Personal Access Token</label><input id="ghToken" type="password" value="' + esc(gh.token) + '" placeholder="ghp_… / github_pat_…"></div>' +
+      '<div class="switch"><div><div class="lbl">启用 GitHub 工具</div><div class="dsc">Agent 可创建仓库、提交文件、读取代码、触发 CI</div></div>' +
+        '<div class="tgl' + (gh.enabled ? ' on' : '') + '" data-tgl-gh="1"></div></div>' +
+      '<div class="row mt"><button class="btn pri fix" data-act="gh-connect">连接并读取账号</button>' +
+        '<button class="btn fix" data-act="goto-github">打开 GitHub 面板</button>' +
+        '<span class="kv">' + (gh.user ? '已连接：@' + esc(gh.user) : '未连接') + '</span></div>' +
+      '<div class="hint2 mt">Token 仅存本机 localStorage。需要权限：<code>repo</code>（读写仓库）、<code>workflow</code>（触发 / 查看 Actions）。</div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>⑥ 数据</h3>' +
       '<div class="sub" style="margin:0 0 12px">Agent ' + S.agents.length + ' 个 · 文档 ' + S.docs.length + ' 篇 · 会话 ' + S.topics.length + ' 个</div>' +
       '<div class="row">' +
         '<button class="btn fix" data-act="exportData">导出全部数据 (JSON)</button>' +
@@ -615,7 +684,7 @@ function renderSettings() {
     if (!p.baseUrl && p.hint) toast(p.name + '：' + p.hint, '');
     else if (!p.baseUrl) toast('请在下方填入 ' + p.name + ' 的 API 地址', '');
   });
-  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey'].forEach((sel) => {
+  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
     const e = $(sel); if (e) e.addEventListener('change', () => { persistCfg(); save(); });
   });
 }
@@ -630,6 +699,12 @@ function persistCfg() {
   }
   if ($('#cfgDefault')) S.settings.defaultModel = $('#cfgDefault').value;
   if ($('#cfgRounds')) S.settings.maxRounds = Math.max(1, Math.min(12, parseInt($('#cfgRounds').value, 10) || 6));
+  const se = S.settings.search || (S.settings.search = {});
+  if ($('#seProvider')) se.provider = $('#seProvider').value;
+  if ($('#seEndpoint')) se.endpoint = $('#seEndpoint').value.trim();
+  if ($('#seCount')) se.count = Math.max(1, Math.min(20, parseInt($('#seCount').value, 10) || 5));
+  const ghc = S.settings.github || (S.settings.github = {});
+  if ($('#ghToken')) ghc.token = $('#ghToken').value.trim();
   const sb = S.settings.sandbox;
   if ($('#sbProvider')) sb.provider = $('#sbProvider').value;
   if ($('#sbEndpoint')) sb.endpoint = $('#sbEndpoint').value.trim();
@@ -717,6 +792,10 @@ function wireGlobal() {
     const mi = t.closest('[data-mention]');
     if (mi) return;
 
+    const tSe = t.closest('[data-tgl-search]');
+    if (tSe) { S.settings.search.enabled = !S.settings.search.enabled; save(); renderSettings(); return; }
+    const tGh = t.closest('[data-tgl-gh]');
+    if (tGh) { S.settings.github.enabled = !S.settings.github.enabled; save(); renderSettings(); return; }
     const tMode = t.closest('[data-theme-mode]');
     if (tMode) { S.settings.theme.mode = tMode.dataset.themeMode; applyTheme(); save(); renderSettings(); return; }
     const tglTh = t.closest('[data-tgl-theme]');
@@ -799,6 +878,21 @@ function saveDocIfDirty() {
 async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
+    case 'goto-github': { S.ui.view = 'github'; S.ui.gh = S.ui.gh || {}; closeSideMobile(); save(); renderShell(); if (S.settings.github.token) ghLoadRepos(); return; }
+    case 'attach': { const f = $('#fileInput'); if (f) f.click(); return; }
+    case 'rmattach': { removePending(+e.target.closest('[data-i]').dataset.i); return; }
+    case 'export-zip': { await exportTopicZip(e); return; }
+    case 'search-test': { await testSearch(e); return; }
+    case 'gh-connect': { await ghConnect(e); return; }
+    case 'gh-newrepo': { openNewRepoDialog(); return; }
+    case 'gh-open': { await ghOpenRepo(e.target.closest('[data-repo]').dataset.repo); return; }
+    case 'gh-repos': { S.ui.gh.repo = null; renderGithub(); return; }
+    case 'gh-file': { await ghOpenFile(e.target.closest('[data-path]').dataset.path); return; }
+    case 'gh-save': { await ghSaveFile(e); return; }
+    case 'gh-refresh-runs': { await ghLoadRuns(S.ui.gh.repo); return; }
+    case 'gh-run-wf': { await ghTriggerWorkflow(e); return; }
+    case 'gh-close-file': { S.ui.gh.path = null; S.ui.gh.file = null; renderGithub(); return; }
+    case 'lightbox': { openLightbox(e.target.src); return; }
     case 'goto-search': { S.ui.view = 'search'; closeSideMobile(); save(); renderShell(); setTimeout(() => { const i = $('#q'); if (i) i.focus(); }, 30); return; }
     case 'viewdoc': { openDocDrawer(e && e.target && e.target.closest('[data-id]') ? e.target.closest('[data-id]').dataset.id : S.ui.activeDocId); return; }
     case 'closedoc': { closeDocDrawer(); return; }

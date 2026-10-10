@@ -1,10 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#181613"/>
-  <rect x="3" y="3" width="506" height="506" rx="110" fill="none" stroke="#C9A45C" stroke-opacity="0.35" stroke-width="3"/>
   <defs>
-    <linearGradient id="g" x1="100" y1="80" x2="412" y2="432">
-      <stop offset="0" stop-color="#8C6E33"/><stop offset=".5" stop-color="#E7D4A4"/><stop offset="1" stop-color="#A8823D"/>
+    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3E2D0F"/>
+      <stop offset=".28" stop-color="#A8823D"/>
+      <stop offset=".50" stop-color="#FAF2DA"/>
+      <stop offset=".78" stop-color="#A8823D"/>
+      <stop offset="1" stop-color="#4E3A16"/>
     </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#C9A45C" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#C9A45C" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <path d="M256 44 L290 215 L451 256 L290 297 L256 468 L222 297 L61 256 L222 215 Z" fill="url(#g)"/>
+  <rect width="512" height="512" rx="115" fill="#06060A"/>
+  <circle cx="256" cy="256" r="150" fill="url(#halo)"/>
+  <path d="M256 43 Q272 240 469 256 Q272 272 256 469 Q240 272 43 256 Q240 240 256 43 Z" fill="url(#lg)"/>
 </svg>

@@ -1,5 +1,5 @@
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  核心逻辑（Part 1 / 3）
+ * LUCIFER · 多智能体中枢  ——  核心逻辑（Part 1 / 4）
  * ===================================================================== */
 
 /* ------------------------- 基础工具 ------------------------- */
@@ -109,15 +109,16 @@ const PRESETS = [
   { id: 'custom', name: '自定义地址', baseUrl: '', hint: '' },
 ];
 
-/* 主题预设（主色相 h / 饱和 s / 明度 l） */
+/* 主题预设（主色相 h / 饱和 s / 明度 l）—— 默认靛紫，与第一版配色一致 */
 const THEMES = [
-  { id: 'gold',   name: '鎏金', h: 40, s: '50%', l: '58%' },
-  { id: 'bronze', name: '青铜', h: 28, s: '38%', l: '52%' },
-  { id: 'champ',  name: '香槟', h: 46, s: '42%', l: '66%' },
-  { id: 'indigo', name: '靛青', h: 232, s: '62%', l: '64%' },
-  { id: 'jade',   name: '青玉', h: 165, s: '46%', l: '52%' },
-  { id: 'rose',   name: '玫瑰', h: 348, s: '52%', l: '62%' },
-  { id: 'steel',  name: '冷灰', h: 210, s: '16%', l: '62%' },
+  { id: 'indigo', name: '靛紫', h: 248, s: '100%', l: '71%' },
+  { id: 'violet', name: '紫罗兰', h: 268, s: '88%', l: '70%' },
+  { id: 'azure',  name: '天青', h: 212, s: '90%', l: '66%' },
+  { id: 'cyan',   name: '碧青', h: 186, s: '82%', l: '60%' },
+  { id: 'jade',   name: '青玉', h: 158, s: '62%', l: '56%' },
+  { id: 'rose',   name: '玫瑰', h: 340, s: '82%', l: '68%' },
+  { id: 'amber',  name: '琥珀', h: 34,  s: '78%', l: '62%' },
+  { id: 'gold',   name: '鎏金', h: 40,  s: '50%', l: '58%' },
 ];
 const EMOJIS = ['🧠','🤖','👨‍💻','👩‍💻','🕵️','📚','🔬','✍️','🎨','🎬','🎵','⚙️','🛠️','📊','🧩','🗂️','📝','🌐','🚀','🛡️','🧪','💡','🧭','🎯','🐧','🐳','☁️','🔮','🦾','🪄'];
 
@@ -152,10 +153,12 @@ function defaultState() {
       activeProviderId: pid,
       defaultModel: 'deepseek-chat',
       sandbox: { endpoint: '', apiKey: '', enabled: false, provider: 'e2b', lastOk: 0, note: '' },
+      search: { provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 },
+      github: { token: '', user: '', enabled: false, lastOk: 0, defaultPrivate: true },
       maxRounds: 6,
       theme: {
-        mode: 'dark', preset: 'gold', h: 40, s: '50%', l: '58%',
-        radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false,
+        mode: 'dark', preset: 'indigo', h: 248, s: '100%', l: '71%',
+        radius: 1, fontScale: 1, glassBlur: 22, aurora: true, custom: false,
       },
     },
     agents: [{
@@ -173,6 +176,7 @@ function defaultState() {
       view: 'chat', activeAgentId: 'main', activeTopicId: null, editAgentId: null,
       editTab: 'base', activeDocId: null, collapsed: false, drafting: '', statsOpen: false, _q: '',
       sideOpen: false, search: '', searchScope: 'all', tab: 'chat', docView: null,
+      pending: [], gh: { repo: null, path: null, tab: 'repos', runs: [], repos: [] },
     },
   };
 }
@@ -202,6 +206,8 @@ function load() {
     o.topics = Array.isArray(o.topics) ? o.topics : [];
     o.ui = Object.assign(d.ui, o.ui || {});
     o.settings.theme = Object.assign(d.settings.theme, (o.settings || {}).theme || {});
+    o.settings.search = Object.assign(d.settings.search, (o.settings || {}).search || {});
+    o.settings.github = Object.assign(d.settings.github, (o.settings || {}).github || {});
     if (!o.agents.some((a) => a.isMain)) o.agents.unshift(d.agents[0]);
     o.agents.forEach((a) => {
       a.skills = a.skills || [];
@@ -379,6 +385,9 @@ async function streamChat(agent, messages, onDelta, signal, onUsage) {
 
 /* ------------------------- 指令解析 ------------------------- */
 const RE_CALL = /<call\s+agent\s*=\s*["']([^"']+)["']\s*>([\s\S]*?)<\/call>/g;
+const RE_SANDBOX = /<sandbox(?:\s+lang\s*=\s*["']([^"']+)["'])?\s*>([\s\S]*?)<\/sandbox>/g;
+const RE_SEARCH = /<search(?:\s+count\s*=\s*["'](\d+)["'])?\s*>([\s\S]*?)<\/search>/g;
+const RE_GH = /<gh\s+([^>]*?)(?:\/>|>([\s\S]*?)<\/gh>)/g;
 const RE_DOC = /<doc\s+op\s*=\s*["']([^"']+)["']\s*([^>]*?)(?:\/>|>([\s\S]*?)<\/doc>)/g;
 
 function extractDirectives(text) {
@@ -391,12 +400,26 @@ function extractDirectives(text) {
     const title = (attrs.match(/title\s*=\s*["']([^"']*)["']/) || [])[1] || '';
     ops.push({ type: 'doc', op: (m[1] || '').toLowerCase(), title: title.trim(), content: (m[3] || '').trim(), index: m.index });
   }
+  RE_SANDBOX.lastIndex = 0;
+  while ((m = RE_SANDBOX.exec(text))) ops.push({ type: 'sandbox', lang: m[1] || 'python', code: m[2].trim(), index: m.index });
+  RE_SEARCH.lastIndex = 0;
+  while ((m = RE_SEARCH.exec(text))) ops.push({ type: 'search', count: m[1] ? +m[1] : 0, query: m[2].trim(), index: m.index });
+  RE_GH.lastIndex = 0;
+  while ((m = RE_GH.exec(text))) {
+    const a = m[1] || '';
+    const g = (k) => (a.match(new RegExp(k + '\\s*=\\s*["\']([^"\']*)["\']')) || [])[1] || '';
+    ops.push({ type: 'gh', op: g('op') || 'list', repo: g('repo'), path: g('path'), name: g('name'), branch: g('branch') || 'main', message: g('message') || g('msg'), workflow: g('workflow'), priv: g('private'), content: (m[2] || '').trim(), index: m.index });
+  }
   ops.sort((a, b) => a.index - b.index);
   return ops;
 }
 function stripDirectives(text) {
-  RE_CALL.lastIndex = 0; RE_DOC.lastIndex = 0;
-  return String(text).replace(RE_CALL, '').replace(RE_DOC, '').replace(/\n{3,}/g, '\n\n').trim();
+  RE_CALL.lastIndex = 0; RE_DOC.lastIndex = 0; RE_SANDBOX.lastIndex = 0;
+  RE_SEARCH.lastIndex = 0; RE_GH.lastIndex = 0;
+  return String(text)
+    .replace(RE_CALL, '').replace(RE_DOC, '').replace(RE_SANDBOX, '')
+    .replace(RE_SEARCH, '').replace(RE_GH, '')
+    .replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /* ------------------------- 提示词拼装 ------------------------- */
@@ -420,15 +443,34 @@ function buildSystem(agent) {
     parts.push('\n\n【团队文档库】以下文档你可以直接阅读，无需额外请求：\n\n' + rich +
       '\n\n若需要某篇的完整正文，用 <doc op="read" title="标题"/>；查看全部标题用 <doc op="list"/>。');
   }
-  parts.push(S.settings.sandbox && S.settings.sandbox.enabled
-    ? '\n\n【云沙盒】已配置：' + S.settings.sandbox.provider + ' @ ' + S.settings.sandbox.endpoint
-    : '\n\n【云沙盒】未配置（由使用者自行添加，当前不可用）。');
+  const rl = [];
+  const sb = S.settings.sandbox || {};
+  const se = S.settings.search || {};
+  const gh = S.settings.github || {};
+  if (sb.enabled && sb.endpoint) {
+    rl.push('- 云沙盒（可执行代码）：\n  <sandbox>print("hello")</sandbox>\n  支持 Python（默认）与 shell，返回 stdout/stderr。');
+  }
+  if (se.enabled && se.provider !== 'none') {
+    rl.push('- 联网检索：\n  <search>要查的关键词</search>\n  返回标题 / 链接 / 摘要，可用于查最新资料。');
+  }
+  if (gh.enabled && gh.token) {
+    rl.push('- GitHub 仓库操作（当前账号 @' + (gh.user || '未知') + '）：\n' +
+      '  <gh op="list" repo="owner/name"/>  列出仓库根目录文件\n' +
+      '  <gh op="read" repo="owner/name" path="src/a.js"/>  读取文件\n' +
+      '  <gh op="write" repo="owner/name" path="docs/x.md" message="docs: 更新">文件内容</gh>  写入并提交\n' +
+      '  <gh op="create" name="my-repo" private="true">仓库描述</gh>  新建仓库\n' +
+      '  <gh op="runs" repo="owner/name"/>  查看最近的 CI 运行\n' +
+      '  <gh op="run" repo="owner/name" workflow="ci.yml"/>  触发 CI');
+  }
+  parts.push(rl.length
+    ? '\n\n【可用工具】你可以直接使用以下工具，写指令即可，前端会执行并把结果回传：\n' + rl.join('\n')
+    : '\n\n【可用工具】当前未启用任何工具（云沙盒 / 联网检索 / GitHub 均未配置或未开启）。');
   return parts.join('');
 }
 function apiMessages(agent, topic, maxHist) {
   const sys = { role: 'system', content: buildSystem(agent) };
   const hist = topic.messages.filter((m) => m.role === 'user' || m.role === 'assistant').slice(-(maxHist || 24));
-  return [sys].concat(hist.map((m) => ({ role: m.role, content: m.content || '' })));
+  return [sys].concat(hist.map((m) => ({ role: m.role, content: toApiContent(m) })));
 }
 
 /* ------------------------- 文档操作 ------------------------- */
@@ -510,7 +552,7 @@ async function fetchSkill(url) {
 
 
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 3）
+ * LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 4）
  * ===================================================================== */
 
 /* ------------------------- 头像 ------------------------- */
@@ -539,7 +581,7 @@ function renderShell() {
   '<aside class="side' + (S.ui.sideOpen ? ' open' : '') + '">' +
     '<div class="side-head">' +
       '<div class="logo">' + STAR_SVG + '</div>' +
-      '<div class="brand"><b class="gold-text">晨星</b><span>LUCIFER ' + VERSION + '</span></div>' +
+      '<div class="brand"><b class="brand-text">LUCIFER</b><span>多智能体中枢 ' + VERSION + '</span></div>' +
     '</div>' +
     '<div class="side-search"><input id="agentSearch" placeholder="搜索会话 / Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
     '<div class="side-scroll">' +
@@ -550,6 +592,7 @@ function renderShell() {
     '<div class="side-foot">' +
       '<button data-act="goto-search"><span class="ico">⌕</span><span>历史检索</span></button>' +
       '<button data-act="goto-docs"><span class="ico">▤</span><span>文档库</span></button>' +
+      '<button data-act="goto-github"><span class="ico">⑂</span><span>GitHub</span>' + (S.settings.github.user ? '<span class="badge">@' + esc(S.settings.github.user) + '</span>' : '') + '</button>' +
       '<button data-act="goto-settings"><span class="ico">⚙</span><span>设置</span></button>' +
     '</div>' +
   '</aside>' +
@@ -601,6 +644,7 @@ function renderView() {
   else if (v === 'settings') renderSettings();
   else if (v === 'agent') renderAgentEdit();
   else if (v === 'search') renderSearch();
+  else if (v === 'github') renderGithub();
   else renderChat();
   const tb = document.getElementById('tabbar');
   if (tb) Array.from(tb.querySelectorAll('.tab')).forEach((x) => x.classList.toggle('on', x.dataset.tab === (v === 'chat' ? 'chat' : v)));
@@ -616,7 +660,7 @@ function msgHTML(m, agent) {
         '<div class="ob"><div class="prose">' + mdRender(m.content) + '</div></div></div></div>';
     }
     return '<div class="msg user">' + avatarHTML({ avatar: '🙋' }) +
-      '<div class="bd"><div class="prose">' + mdRender(m.content) + '</div></div></div>';
+      '<div class="bd">' + mediaHTML(m) + '<div class="prose">' + mdRender(m.content) + '</div></div></div>';
   }
   const ops = (m.ops || []).map((o, i) => opHTML(o, i)).join('');
   const dchips = docChipsFor(m);
@@ -639,6 +683,10 @@ function opHTML(o, i) {
       '<div class="ob"><div class="kv">任务</div><div class="prose">' + mdRender(o.task) + '</div>' +
       '<div class="kv mt">回执</div><div class="prose">' + (o.result ? mdRender(o.result) : '<span class="spin"></span>') + '</div></div></div>';
   }
+  if (o.type === 'sandbox') return toolOpHTML(i, '⌘', '沙盒执行 · ' + esc(o.lang || 'python'),
+    '```' + (o.lang || 'python') + '\n' + (o.code || '').slice(0, 2000) + '\n```\n\n**输出**\n' + (o.result || '_执行中…_'), o);
+  if (o.type === 'search') return toolOpHTML(i, '⌕', '联网检索 · ' + esc(o.query), o.result || '', o);
+  if (o.type === 'gh') return toolOpHTML(i, '⑂', 'GitHub · ' + esc(o.op) + (o.repo ? ' ' + esc(o.repo) : ''), o.result || (o.content || '').slice(0, 800), o);
   const label = ({ create: '创建', append: '追加', update: '更新', read: '读取', list: '列举', delete: '删除' })[o.op] || o.op;
   const doc = o.title ? findDoc(o.title) : null;
   const openBtn = doc
@@ -697,14 +745,18 @@ function renderChat() {
     '<div class="scroll" id="msgs"><div class="msgs">' + inner + '</div></div>' +
     '<div class="composer"><div class="composer-in">' +
       statsBubbleHTML(topic) +
+      pendingHTML() +
       '<div class="cbox glass">' +
         '<textarea id="input" rows="1" placeholder="给 ' + esc(a.name) + ' 发消息…"></textarea>' +
         '<div class="crow">' +
-          '<button class="icon-btn" data-act="evac" title="召集全员协作">⚡</button>' +
+          '<button class="icon-btn" data-act="attach" title="添加图片 / 文件">⊕</button>' +
+          '<button class="icon-btn' + (S.settings.sandbox.enabled ? ' on' : '') + '" data-act="evac" title="召集全员协作">⚡</button>' +
           '<button class="icon-btn" data-act="mention" title="提及 Agent">@</button>' +
           '<button class="send" data-act="send" title="发送">➤</button>' +
         '</div>' +
       '</div>' +
+      '<div class="drop-hint">松开即添加图片或文件</div>' +
+      '<input type="file" id="fileInput" multiple hidden accept="image/*,.txt,.md,.json,.js,.ts,.py,.html,.css,.csv,.yml,.yaml,.log">' +
       '<div class="hint">' +
         '<span>Enter 发送 · Shift+Enter 换行</span>' +
         '<button class="hint-toggle" data-act="toggle-syntax">指令语法 <i>⌃</i></button>' +
@@ -712,7 +764,16 @@ function renderChat() {
           (a.tools.delegate ? '<span>派发 <code>&lt;call agent="@角色名"&gt;…&lt;/call&gt;</code></span>' : '') +
           (a.tools.docs ? '<span>文档 <code>&lt;doc op="create" title="…"&gt;…&lt;/doc&gt;</code></span>' : '') +
         '</span>' +
-        '<span style="margin-left:auto">' + (S.settings.sandbox.enabled ? '云沙盒已连接' : '云沙盒未配置') + '</span>' +
+        '<span class="hint-syn">' +
+          (S.settings.sandbox.enabled ? '<span>沙盒 <code>&lt;sandbox&gt;…&lt;/sandbox&gt;</code></span>' : '') +
+          (S.settings.search.enabled ? '<span>检索 <code>&lt;search&gt;…&lt;/search&gt;</code></span>' : '') +
+          (S.settings.github.enabled ? '<span>GitHub <code>&lt;gh op="write" …&gt;</code></span>' : '') +
+        '</span>' +
+        '<span style="margin-left:auto">' +
+          (S.settings.sandbox.enabled ? '沙盒✓' : '沙盒✗') + ' · ' +
+          (S.settings.search.enabled ? '检索✓' : '检索✗') + ' · ' +
+          (S.settings.github.enabled ? 'GitHub✓' : 'GitHub✗') +
+        '</span>' +
       '</div>' +
     '</div></div>';
   bindChat();
@@ -736,6 +797,22 @@ function bindChat() {
   ta.value = S.ui.drafting || '';
   autoGrow(ta);
   ta.addEventListener('input', () => { S.ui.drafting = ta.value; autoGrow(ta); hideMention(); });
+  ta.addEventListener('paste', (ev) => {
+    const files = Array.from((ev.clipboardData && ev.clipboardData.files) || []);
+    if (files.length) { ev.preventDefault(); addFiles(files); }
+  });
+  const fi = $('#fileInput');
+  if (fi) fi.addEventListener('change', () => { addFiles(Array.from(fi.files || [])); fi.value = ''; });
+  const box = document.querySelector('.composer');
+  if (box && !box.dataset.dnd) {
+    box.dataset.dnd = '1';
+    box.addEventListener('dragover', (ev) => { ev.preventDefault(); box.classList.add('dragging'); });
+    box.addEventListener('dragleave', () => box.classList.remove('dragging'));
+    box.addEventListener('drop', (ev) => {
+      ev.preventDefault(); box.classList.remove('dragging');
+      addFiles(Array.from((ev.dataTransfer && ev.dataTransfer.files) || []));
+    });
+  }
   ta.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); }
   });
@@ -792,7 +869,9 @@ async function runTurn(userText) {
   const agent = curAgent();
   const topic = ensureTopic(agent.id);
   if (topic.messages.length === 0) topic.title = userText.slice(0, 18);
-  topic.messages.push({ role: 'user', content: userText, ts: now(), by: agent.id });
+  const atts = (S.ui.pending || []).slice();
+  S.ui.pending = [];
+  topic.messages.push({ role: 'user', content: userText, ts: now(), by: agent.id, attachments: atts });
   save();
   renderChat();
 
@@ -838,11 +917,18 @@ async function runTurn(userText) {
 
       for (let i = 0; i < ops.length; i++) {
         const o = ops[i];
-        if (o.type === 'doc') {
-          const r = execDocOp(o);
-          o.result = r; o.status = 'done';
+        if (o.type !== 'call') {
+          let r;
+          try { r = await execToolOp(o); o.status = 'done'; }
+          catch (err) { r = '执行失败：' + (err.message || err); o.status = 'error'; }
+          o.result = r;
           opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
-          results.push('【文档操作结果】' + o.op + ' 「' + o.title + '」→ ' + r);
+          const tag = o.type === 'doc' ? '文档 ' + o.op + (o.title ? '「' + o.title + '」' : '')
+            : o.type === 'sandbox' ? '沙盒执行'
+            : o.type === 'search' ? '联网检索「' + o.query + '」'
+            : o.type === 'gh' ? 'GitHub ' + o.op + (o.repo ? ' ' + o.repo : '')
+            : o.type;
+          results.push('【工具执行结果 · ' + tag + '】\n' + String(r).slice(0, 6000));
           save();
         } else {
           const key = String(o.agent).replace(/^@/, '');
@@ -1042,7 +1128,9 @@ function renderSettings() {
   const ps = S.settings.providers;
   const ap = getProvider(S.settings.activeProviderId) || ps[0];
   const sb = S.settings.sandbox;
-  const th = Object.assign({ mode: 'dark', preset: 'gold', radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false }, S.settings.theme || {});
+  const th = Object.assign({ mode: 'dark', preset: 'indigo', radius: 1, fontScale: 1, glassBlur: 22, aurora: true, custom: false }, S.settings.theme || {});
+  const se = Object.assign({ provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 }, S.settings.search || {});
+  const gh = Object.assign({ token: '', user: '', enabled: false, lastOk: 0 }, S.settings.github || {});
   $('#body').innerHTML =
   '<div class="scroll"><div class="page">' +
     '<h2>设置</h2>' +
@@ -1103,7 +1191,30 @@ function renderSettings() {
       '<div class="row mt"><button class="btn fix" data-act="resetTheme">恢复默认外观</button></div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>④ 数据</h3>' +
+    '<div class="card glass"><h3>④ 联网检索</h3>' +
+      '<div class="fld"><label>检索服务商</label><select id="seProvider">' +
+        [['none', '不启用'], ['searxng', 'SearXNG（自建实例 · 免费）'], ['tavily', 'Tavily API'], ['brave', 'Brave Search API'], ['serper', 'Serper (Google)']]
+          .map(([k, n]) => '<option value="' + k + '"' + (se.provider === k ? ' selected' : '') + '>' + n + '</option>').join('') +
+      '</select><div class="hint2">SearXNG 填实例地址；Tavily / Brave / Serper 填各自的 API Key。</div></div>' +
+      '<div class="fld"><label>地址 或 API Key</label><input id="seEndpoint" value="' + esc(se.endpoint) + '" placeholder="https://searx.example.com  或  tvly-xxxx"></div>' +
+      '<div class="fld"><label>每次返回条数</label><input id="seCount" type="number" min="1" max="20" value="' + (se.count || 5) + '"></div>' +
+      '<div class="switch"><div><div class="lbl">启用联网检索</div><div class="dsc">开启后 Agent 可用 &lt;search&gt;关键词&lt;/search&gt; 查资料</div></div>' +
+        '<div class="tgl' + (se.enabled ? ' on' : '') + '" data-tgl-search="1"></div></div>' +
+      '<div class="row mt"><button class="btn pri fix" data-act="search-test">测试检索</button>' +
+        '<span class="kv">' + (se.lastOk ? '上次成功：' + relTime(se.lastOk) : '尚未测试') + '</span></div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>⑤ GitHub</h3>' +
+      '<div class="fld"><label>Personal Access Token</label><input id="ghToken" type="password" value="' + esc(gh.token) + '" placeholder="ghp_… / github_pat_…"></div>' +
+      '<div class="switch"><div><div class="lbl">启用 GitHub 工具</div><div class="dsc">Agent 可创建仓库、提交文件、读取代码、触发 CI</div></div>' +
+        '<div class="tgl' + (gh.enabled ? ' on' : '') + '" data-tgl-gh="1"></div></div>' +
+      '<div class="row mt"><button class="btn pri fix" data-act="gh-connect">连接并读取账号</button>' +
+        '<button class="btn fix" data-act="goto-github">打开 GitHub 面板</button>' +
+        '<span class="kv">' + (gh.user ? '已连接：@' + esc(gh.user) : '未连接') + '</span></div>' +
+      '<div class="hint2 mt">Token 仅存本机 localStorage。需要权限：<code>repo</code>（读写仓库）、<code>workflow</code>（触发 / 查看 Actions）。</div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>⑥ 数据</h3>' +
       '<div class="sub" style="margin:0 0 12px">Agent ' + S.agents.length + ' 个 · 文档 ' + S.docs.length + ' 篇 · 会话 ' + S.topics.length + ' 个</div>' +
       '<div class="row">' +
         '<button class="btn fix" data-act="exportData">导出全部数据 (JSON)</button>' +
@@ -1126,7 +1237,7 @@ function renderSettings() {
     if (!p.baseUrl && p.hint) toast(p.name + '：' + p.hint, '');
     else if (!p.baseUrl) toast('请在下方填入 ' + p.name + ' 的 API 地址', '');
   });
-  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey'].forEach((sel) => {
+  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
     const e = $(sel); if (e) e.addEventListener('change', () => { persistCfg(); save(); });
   });
 }
@@ -1141,6 +1252,12 @@ function persistCfg() {
   }
   if ($('#cfgDefault')) S.settings.defaultModel = $('#cfgDefault').value;
   if ($('#cfgRounds')) S.settings.maxRounds = Math.max(1, Math.min(12, parseInt($('#cfgRounds').value, 10) || 6));
+  const se = S.settings.search || (S.settings.search = {});
+  if ($('#seProvider')) se.provider = $('#seProvider').value;
+  if ($('#seEndpoint')) se.endpoint = $('#seEndpoint').value.trim();
+  if ($('#seCount')) se.count = Math.max(1, Math.min(20, parseInt($('#seCount').value, 10) || 5));
+  const ghc = S.settings.github || (S.settings.github = {});
+  if ($('#ghToken')) ghc.token = $('#ghToken').value.trim();
   const sb = S.settings.sandbox;
   if ($('#sbProvider')) sb.provider = $('#sbProvider').value;
   if ($('#sbEndpoint')) sb.endpoint = $('#sbEndpoint').value.trim();
@@ -1228,6 +1345,10 @@ function wireGlobal() {
     const mi = t.closest('[data-mention]');
     if (mi) return;
 
+    const tSe = t.closest('[data-tgl-search]');
+    if (tSe) { S.settings.search.enabled = !S.settings.search.enabled; save(); renderSettings(); return; }
+    const tGh = t.closest('[data-tgl-gh]');
+    if (tGh) { S.settings.github.enabled = !S.settings.github.enabled; save(); renderSettings(); return; }
     const tMode = t.closest('[data-theme-mode]');
     if (tMode) { S.settings.theme.mode = tMode.dataset.themeMode; applyTheme(); save(); renderSettings(); return; }
     const tglTh = t.closest('[data-tgl-theme]');
@@ -1310,6 +1431,21 @@ function saveDocIfDirty() {
 async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
+    case 'goto-github': { S.ui.view = 'github'; S.ui.gh = S.ui.gh || {}; closeSideMobile(); save(); renderShell(); if (S.settings.github.token) ghLoadRepos(); return; }
+    case 'attach': { const f = $('#fileInput'); if (f) f.click(); return; }
+    case 'rmattach': { removePending(+e.target.closest('[data-i]').dataset.i); return; }
+    case 'export-zip': { await exportTopicZip(e); return; }
+    case 'search-test': { await testSearch(e); return; }
+    case 'gh-connect': { await ghConnect(e); return; }
+    case 'gh-newrepo': { openNewRepoDialog(); return; }
+    case 'gh-open': { await ghOpenRepo(e.target.closest('[data-repo]').dataset.repo); return; }
+    case 'gh-repos': { S.ui.gh.repo = null; renderGithub(); return; }
+    case 'gh-file': { await ghOpenFile(e.target.closest('[data-path]').dataset.path); return; }
+    case 'gh-save': { await ghSaveFile(e); return; }
+    case 'gh-refresh-runs': { await ghLoadRuns(S.ui.gh.repo); return; }
+    case 'gh-run-wf': { await ghTriggerWorkflow(e); return; }
+    case 'gh-close-file': { S.ui.gh.path = null; S.ui.gh.file = null; renderGithub(); return; }
+    case 'lightbox': { openLightbox(e.target.src); return; }
     case 'goto-search': { S.ui.view = 'search'; closeSideMobile(); save(); renderShell(); setTimeout(() => { const i = $('#q'); if (i) i.focus(); }, 30); return; }
     case 'viewdoc': { openDocDrawer(e && e.target && e.target.closest('[data-id]') ? e.target.closest('[data-id]').dataset.id : S.ui.activeDocId); return; }
     case 'closedoc': { closeDocDrawer(); return; }
@@ -1637,11 +1773,11 @@ function boot() {
 
 
 /* =======================================================================
- * 晨星 · LUCIFER · 多智能体中枢  ——  新增能力（Part 3 / 3）
+ * LUCIFER · 多智能体中枢  ——  主题 / 会话 / 检索 / 文档 / 沙盒（Part 3 / 4）
  * 主题引擎 / 会话列表 / 全文检索 / 对话内文档浏览 / 云沙盒 / 移动端
  * ===================================================================== */
 
-const VERSION = 'v1.0';
+const VERSION = 'v2.0';
 const STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
   '<defs><linearGradient id="starG" x1="3" y1="2" x2="21" y2="22">' +
   '<stop offset="0" stop-color="#8C6E33"/><stop offset=".5" stop-color="#E7D4A4"/><stop offset="1" stop-color="#A8823D"/>' +
@@ -1709,7 +1845,7 @@ function renderTopicList() {
 /* ------------------------- 底部导航（移动端） ------------------------- */
 function renderTabbar() {
   const el = document.getElementById('tabbar'); if (!el) return;
-  const items = [['chat', '对话', '◆'], ['search', '检索', '⌕'], ['docs', '文档', '▤'], ['settings', '设置', '⚙']];
+  const items = [['chat', '对话', '◆'], ['search', '检索', '⌕'], ['docs', '文档', '▤'], ['github', 'GitHub', '⑂'], ['settings', '设置', '⚙']];
   el.innerHTML = items.map(([k, n, i]) =>
     '<button class="tab' + (S.ui.view === k ? ' on' : '') + '" data-act="goto-' + k + '"><i>' + i + '</i>' + n + '</button>').join('');
 }
@@ -1904,7 +2040,7 @@ async function testSandbox(e) {
   if (btn) { btn.disabled = true; btn.textContent = '测试中…'; }
   try {
     const sid = await sandboxCreate();
-    const r = await sandboxRun('print("hello from 晨星")', sid);
+    const r = await sandboxRun('print("hello from LUCIFER")', sid);
     await sbFetch('/sandboxes/' + sid, { method: 'DELETE' }).catch(() => {});
     S.settings.sandbox.lastOk = now();
     S.settings.sandbox.enabled = true;
@@ -1918,6 +2054,585 @@ async function testSandbox(e) {
 }
 window.CX = { sandboxRun, sandboxCreate, state: () => S };
 
-/* ------------------------- 启动 ------------------------- */
+/* 启动由 Part 4 末尾负责 */
+
+
+/* =======================================================================
+ * LUCIFER · 多智能体中枢  ——  工具与集成（Part 4 / 4）
+ * 云沙盒工具 / 联网检索 / 会话 ZIP 导出 / 图片与文件 / GitHub 集成
+ * ===================================================================== */
+
+const TOOL_VERSION = 'v2.0';
+
+/* ------------------------- 附件 ------------------------- */
+const readAsDataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+const readAsText = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(f); });
+function fmtSize(n) { n = n || 0; return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB'; }
+
+function pendingHTML() {
+  const p = S.ui.pending || [];
+  if (!p.length) return '';
+  return '<div class="attach-row">' + p.map((a, i) =>
+    '<div class="attach">' +
+      (a.kind === 'image' ? '<img src="' + esc(a.data) + '" alt="">' : '<i style="color:var(--accent)">▤</i>') +
+      '<span class="an">' + esc(a.name) + '</span>' +
+      '<button class="ax" data-act="rmattach" data-i="' + i + '" title="移除">✕</button>' +
+    '</div>').join('') + '</div>';
+}
+function removePending(i) { (S.ui.pending || []).splice(i, 1); save(); renderChat(); }
+
+async function addFiles(files) {
+  if (!files || !files.length) return;
+  let n = 0;
+  for (const f of files) {
+    if (f.size > 5 * 1024 * 1024) { toast(f.name + ' 超过 5MB，已跳过', 'err'); continue; }
+    const isImg = /^image\//.test(f.type);
+    if (isImg) {
+      S.ui.pending.push({ id: uid('at'), kind: 'image', name: f.name, mime: f.type, size: f.size, data: await readAsDataURL(f) });
+    } else {
+      const looksText = /^(text\/|application\/(json|javascript|xml|x-yaml))/.test(f.type) ||
+        /\.(txt|md|json|js|mjs|ts|tsx|jsx|py|html|css|scss|csv|yml|yaml|log|sh|toml|ini|sql|java|go|rs|c|cpp|h)$/i.test(f.name);
+      let text = '';
+      if (looksText && f.size < 400 * 1024) text = (await readAsText(f)).slice(0, 80000);
+      S.ui.pending.push({ id: uid('at'), kind: 'file', name: f.name, mime: f.type, size: f.size, text });
+    }
+    n++;
+  }
+  if (n) { save(); renderChat(); toast('已添加 ' + n + ' 个附件'); }
+}
+
+function mediaHTML(m) {
+  const atts = (m && m.attachments) || [];
+  if (!atts.length) return '';
+  const imgs = atts.filter((a) => a.kind === 'image');
+  const files = atts.filter((a) => a.kind === 'file');
+  let h = '';
+  if (imgs.length) h += '<div class="msg-imgs">' + imgs.map((a) =>
+    '<img class="msg-img" src="' + esc(a.data) + '" data-act="lightbox" alt="' + esc(a.name) + '">').join('') + '</div>';
+  if (files.length) h += '<div class="msg-files">' + files.map((a) =>
+    '<span class="file-chip"><i>▤</i>' + esc(a.name) + '<span class="kv">' + fmtSize(a.size) + '</span></span>').join('') + '</div>';
+  return h;
+}
+
+/* 把带附件的消息转成 API 的 content（多模态） */
+function toApiContent(m) {
+  const atts = (m && m.attachments) || [];
+  if (!atts.length) return m.content || '';
+  let text = m.content || '';
+  const fileTexts = atts.filter((a) => a.kind === 'file' && a.text)
+    .map((a) => '【附件 ' + a.name + '】\n' + a.text);
+  if (fileTexts.length) text = (text ? text + '\n\n' : '') + fileTexts.join('\n\n');
+  const imgs = atts.filter((a) => a.kind === 'image');
+  const parts = [];
+  if (text) parts.push({ type: 'text', text });
+  imgs.forEach((a) => parts.push({ type: 'image_url', image_url: { url: a.data } }));
+  if (!parts.length) return m.content || '';
+  return parts.length === 1 && parts[0].type === 'text' ? parts[0].text : parts;
+}
+
+function openLightbox(src) {
+  const el = document.createElement('div');
+  el.className = 'lightbox';
+  el.innerHTML = '<img src="' + esc(src) + '" alt="">';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('in'));
+  const close = () => { el.classList.remove('in'); setTimeout(() => el.remove(), 220); };
+  el.addEventListener('click', close);
+  document.addEventListener('keydown', function esc2(ev) { if (ev.key === 'Escape') { close(); document.removeEventListener('keydown', esc2); } });
+}
+
+/* ------------------------- 云沙盒工具 ------------------------- */
+async function toolSandbox(op) {
+  const sb = S.settings.sandbox || {};
+  if (!sb.enabled || !sb.endpoint) throw new Error('云沙盒未启用或未配置 Endpoint');
+  const lang = (op.lang || 'python').toLowerCase();
+  let code = op.code;
+  if (lang === 'shell' || lang === 'bash' || lang === 'sh') code = 'import subprocess\nprint(subprocess.run(' + JSON.stringify(op.code) + ', shell=True, capture_output=True, text=True).stdout)';
+  const r = await sandboxRun(code);
+  let out = '【沙盒执行完成】\n';
+  if (r.out) out += r.out;
+  if (r.err) out += '\n[stderr]\n' + r.err;
+  if (!r.out && !r.err) out += '（无输出）';
+  return out;
+}
+
+/* ------------------------- 联网检索 ------------------------- */
+function searchCfg() { return Object.assign({ provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 }, S.settings.search || {}); }
+
+async function webSearch(query, count) {
+  const se = searchCfg();
+  if (!se.enabled || se.provider === 'none') throw new Error('未启用联网检索（设置 → ④ 联网检索）');
+  const n = Math.max(1, Math.min(20, count || se.count || 5));
+  const ep = (se.endpoint || '').trim();
+  if (!ep) throw new Error('未填写检索地址 / API Key');
+  const norm = (arr, tf) => (arr || []).slice(0, n).map(tf).filter((x) => x && x.url);
+
+  if (se.provider === 'searxng') {
+    const u = ep.replace(/\/+$/, '') + '/search?format=json&language=zh-CN&safesearch=0&q=' + encodeURIComponent(query);
+    const r = await fetch(u);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    return norm(j.results, (x) => ({ title: x.title, url: x.url, snippet: x.content || '' }));
+  }
+  if (se.provider === 'tavily') {
+    const r = await fetch('https://api.tavily.com/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: ep, query, max_results: n, search_depth: 'basic' }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || j.message || ('HTTP ' + r.status));
+    return norm(j.results, (x) => ({ title: x.title, url: x.url, snippet: x.content || '' }));
+  }
+  if (se.provider === 'brave') {
+    const r = await fetch('https://api.search.brave.com/res/v1/web/search?count=' + n + '&q=' + encodeURIComponent(query),
+      { headers: { 'Accept': 'application/json', 'X-Subscription-Token': ep } });
+    const j = await r.json();
+    if (!r.ok) throw new Error((j.error && j.error.detail) || ('HTTP ' + r.status));
+    return norm(j.web && j.web.results, (x) => ({ title: x.title, url: x.url, snippet: x.description || '' }));
+  }
+  if (se.provider === 'serper') {
+    const r = await fetch('https://google.serper.dev/search', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-KEY': ep }, body: JSON.stringify({ q: query, num: n }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.message || ('HTTP ' + r.status));
+    return norm(j.organic, (x) => ({ title: x.title, url: x.link, snippet: x.snippet || '' }));
+  }
+  throw new Error('未知的检索服务商：' + se.provider);
+}
+
+async function testSearch(e) {
+  persistCfg();
+  const btn = e && e.target && e.target.closest('[data-act="search-test"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '检索中…'; }
+  try {
+    const rs = await webSearch('LobeHub 多智能体', 3);
+    S.settings.search.lastOk = now(); save();
+    toast('检索连通 ✓ 返回 ' + rs.length + ' 条：' + (rs[0] ? rs[0].title.slice(0, 24) : ''), 'ok');
+    if (S.ui.view === 'settings') renderSettings();
+  } catch (err) {
+    toast('检索失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '测试检索'; }
+}
+
+function toolSearch(op) {
+  return webSearch(op.query, op.count).then((rs) => {
+    if (!rs.length) return '【检索「' + op.query + '」】没有找到结果。';
+    return '【检索「' + op.query + '」共 ' + rs.length + ' 条】\n' +
+      rs.map((x, i) => (i + 1) + '. ' + x.title + '\n   ' + x.url + '\n   ' + (x.snippet || '').replace(/\s+/g, ' ').slice(0, 220)).join('\n');
+  });
+}
+
+/* ------------------------- ZIP（纯 JS，store 模式） ------------------------- */
+const CRC_T = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; } return t; })();
+function crc32(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) c = CRC_T[(c ^ buf[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+function zipStore(entries) {
+  const enc = new TextEncoder();
+  const chunks = [], central = [];
+  let offset = 0;
+  const d = new Date();
+  const dosTime = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF;
+  const dosDate = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+  for (const e of entries) {
+    const nameB = enc.encode(e.name);
+    const data = typeof e.data === 'string' ? enc.encode(e.data) : e.data;
+    const crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint16(8, 0, true); lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, nameB.length, true); lh.setUint16(28, 0, true);
+    chunks.push(new Uint8Array(lh.buffer), nameB, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, dosTime, true);
+    ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true);
+    ch.setUint32(24, data.length, true); ch.setUint16(28, nameB.length, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), nameB);
+    offset += 30 + nameB.length + data.length;
+  }
+  let cdSize = 0; central.forEach((c) => { cdSize += c.length; });
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob(chunks.concat(central, [new Uint8Array(end.buffer)]), { type: 'application/zip' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function safeName(s) { return String(s || '').replace(/[\\/:*?"<>|\r\n\t]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 60) || 'untitled'; }
+
+async function exportTopicZip(e) {
+  const btn = e && e.target && e.target.closest('[data-act="export-zip"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '打包中…'; }
+  try {
+    const a = curAgent();
+    const t = ensureTopic(a.id);
+    const stamp = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const dateStr = stamp.getFullYear() + pad(stamp.getMonth() + 1) + pad(stamp.getDate()) + '-' + pad(stamp.getHours()) + pad(stamp.getMinutes());
+    const st = t.stats || {};
+    const usedDocs = [];
+    (t.messages || []).forEach((m) => (m.ops || []).forEach((o) => {
+      if (o.type === 'doc' && o.title) { const d = findDoc(o.title); if (d && !usedDocs.some((x) => x.id === d.id)) usedDocs.push(d); }
+    }));
+
+    /* 可读转录 */
+    const md = ['# ' + (t.title || '会话') , '',
+      '- Agent：' + a.name + ' (@' + a.roleName + ')',
+      '- 创建时间：' + fmtTime(t.createdAt || now()),
+      '- 消息数：' + (t.messages || []).length,
+      '- Token：' + fmtNum(st.totalTokens || 0) + '（输入 ' + fmtNum(st.promptTokens || 0) + ' / 输出 ' + fmtNum(st.completionTokens || 0) + '）',
+      '- 请求次数：' + (st.requests || 0),
+      '', '---', ''];
+    (t.messages || []).forEach((m, i) => {
+      const who = m._synthetic ? '系统回执' : m.role === 'user' ? '👤 用户' : '🤖 ' + a.name;
+      md.push('## ' + (i + 1) + '. ' + who + (m.ts ? '　' + fmtTime(m.ts) : ''));
+      if ((m.attachments || []).length) {
+        md.push('', '> 附件：' + m.attachments.map((x) => x.name + '（' + (x.kind === 'image' ? '图片' : '文件') + '）').join('、'));
+      }
+      md.push('', m.content || '（无正文）', '');
+      (m.ops || []).forEach((o) => {
+        md.push('### 工具调用 · ' + (o.type === 'call' ? '派发 ' + o.agent : o.type === 'doc' ? '文档 ' + o.op + (o.title ? '「' + o.title + '」' : '') : o.type));
+        if (o.task) md.push('', '**任务**：' + o.task);
+        if (o.result) md.push('', '**回执**：', '', '```', String(o.result).slice(0, 4000), '```');
+        md.push('');
+      });
+      md.push('---', '');
+    });
+
+    const manifest = {
+      app: 'LUCIFER', version: TOOL_VERSION, exportedAt: new Date().toISOString(),
+      agent: { name: a.name, role: a.roleName, model: modelFor(a), provider: (providerFor(a) || {}).name },
+      topic: { id: t.id, title: t.title, createdAt: t.createdAt, stats: st, messages: t.messages },
+      docs: usedDocs.map((d) => ({ id: d.id, title: d.title, updatedAt: d.updatedAt, content: d.content })),
+    };
+
+    const entries = [
+      { name: 'README.md', data: md.join('\n') },
+      { name: 'conversation.json', data: JSON.stringify(t.messages || [], null, 2) },
+      { name: 'manifest.json', data: JSON.stringify(manifest, null, 2) },
+    ];
+    usedDocs.forEach((d) => entries.push({ name: 'docs/' + safeName(d.title) + '.md', data: d.content || '' }));
+    (t.messages || []).forEach((m, i) => {
+      (m.attachments || []).forEach((att, j) => {
+        if (att.kind === 'image' && att.data && att.data.indexOf('base64,') > 0) {
+          const b64 = att.data.split('base64,')[1];
+          const bin = atob(b64); const u8 = new Uint8Array(bin.length);
+          for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+          entries.push({ name: 'attachments/' + pad(i + 1) + '-' + (j + 1) + '-' + safeName(att.name), data: u8 });
+        } else if (att.text) {
+          entries.push({ name: 'attachments/' + pad(i + 1) + '-' + (j + 1) + '-' + safeName(att.name), data: att.text });
+        }
+      });
+    });
+
+    downloadBlob(zipStore(entries), safeName((t.title || 'conversation')) + '-' + dateStr + '.zip');
+    toast('已导出 ZIP：' + entries.length + ' 个文件', 'ok');
+  } catch (err) {
+    toast('导出失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '导出会话 ZIP'; }
+}
+
+/* ------------------------- GitHub 集成 ------------------------- */
+function ghCfg() { return Object.assign({ token: '', user: '', enabled: false, lastOk: 0 }, S.settings.github || {}); }
+function ghState() { if (!S.ui.gh) S.ui.gh = { repo: null, path: null, tab: 'repos', runs: [], repos: [] }; return S.ui.gh; }
+
+async function ghFetch(path, opt) {
+  const gh = ghCfg();
+  if (!gh.token) throw new Error('未配置 GitHub Token');
+  const r = await fetch('https://api.github.com' + path, Object.assign({}, opt || {}, {
+    headers: Object.assign({
+      'Accept': 'application/vnd.github+json',
+      'Authorization': 'Bearer ' + gh.token,
+      'X-GitHub-Api-Version': '2022-11-28',
+    }, (opt && opt.headers) || {}),
+  }));
+  const txt = await r.text();
+  let j = null; try { j = JSON.parse(txt); } catch (err) {}
+  if (!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status + ' ' + txt.slice(0, 140)));
+  return j;
+}
+function b64d(b64) { const bin = atob(String(b64 || '').replace(/\s/g, '')); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new TextDecoder().decode(u8); }
+function b64e(str) { const u8 = new TextEncoder().encode(str); let bin = ''; for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]); return btoa(bin); }
+
+async function ghConnect(e) {
+  persistCfg();
+  const btn = e && e.target && e.target.closest('[data-act="gh-connect"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '连接中…'; }
+  try {
+    const me = await ghFetch('/user');
+    S.settings.github.user = me.login;
+    S.settings.github.enabled = true;
+    S.settings.github.lastOk = now();
+    save();
+    toast('已连接 GitHub：@' + me.login, 'ok');
+    if (S.ui.view === 'settings') renderSettings(); else renderShell();
+  } catch (err) {
+    toast('GitHub 连接失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '连接并读取账号'; }
+}
+
+async function ghLoadRepos() {
+  const g = ghState();
+  try {
+    const rs = await ghFetch('/user/repos?sort=updated&per_page=60&affiliation=owner,collaborator');
+    g.repos = rs.map((r) => ({ full: r.full_name, name: r.name, private: r.private, desc: r.description, url: r.html_url, branch: r.default_branch, updated: r.updated_at }));
+    if (S.ui.view === 'github') renderGithub();
+  } catch (err) {
+    toast('拉取仓库失败：' + (err.message || err), 'err');
+  }
+}
+
+async function ghOpenRepo(full) {
+  const g = ghState();
+  g.repo = full; g.path = null; g.file = null; g.tab = 'files'; g.tree = null; g.runs = [];
+  renderGithub();
+  try {
+    const info = await ghFetch('/repos/' + full);
+    g.info = { branch: info.default_branch, private: info.private, desc: info.description, url: info.html_url };
+    const tree = await ghFetch('/repos/' + full + '/contents/?ref=' + (info.default_branch || 'main'));
+    g.tree = Array.isArray(tree) ? tree : [];
+    renderGithub();
+    ghLoadRuns(full);
+  } catch (err) {
+    toast('读取仓库失败：' + (err.message || err), 'err');
+  }
+}
+
+async function ghOpenFile(path) {
+  const g = ghState();
+  try {
+    const f = await ghFetch('/repos/' + g.repo + '/contents/' + path.split('/').map(encodeURIComponent).join('/'));
+    g.path = path; g.file = { sha: f.sha, content: b64d(f.content), size: f.size };
+    renderGithub();
+  } catch (err) {
+    toast('读取文件失败：' + (err.message || err), 'err');
+  }
+}
+
+async function ghSaveFile(e) {
+  const g = ghState();
+  const area = document.getElementById('ghEditor');
+  if (!area || !g.repo || !g.path) return;
+  const btn = e && e.target && e.target.closest('[data-act="gh-save"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '提交中…'; }
+  try {
+    const body = {
+      message: (document.getElementById('ghMsg') || {}).value || ('update ' + g.path),
+      content: b64e(area.value),
+      branch: (g.info && g.info.branch) || 'main',
+    };
+    if (g.file && g.file.sha) body.sha = g.file.sha;
+    const r = await ghFetch('/repos/' + g.repo + '/contents/' + g.path.split('/').map(encodeURIComponent).join('/'), {
+      method: 'PUT', body: JSON.stringify(body),
+    });
+    g.file.sha = r.content && r.content.sha;
+    g.file.content = area.value;
+    toast('已提交 ✓ ' + (r.commit && r.commit.sha ? r.commit.sha.slice(0, 7) : ''), 'ok');
+  } catch (err) {
+    toast('提交失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '提交到仓库'; }
+}
+
+async function ghLoadRuns(repo) {
+  const g = ghState();
+  try {
+    const r = await ghFetch('/repos/' + (repo || g.repo) + '/actions/runs?per_page=10');
+    g.runs = (r.workflow_runs || []).map((x) => ({ id: x.id, name: x.name, status: x.status, conclusion: x.conclusion, branch: x.head_branch, event: x.event, url: x.html_url, at: x.created_at }));
+    if (S.ui.view === 'github') renderGithub();
+  } catch (err) {
+    g.runs = [];
+    if (S.ui.view === 'github') renderGithub();
+  }
+}
+
+async function ghTriggerWorkflow(e) {
+  const g = ghState();
+  const sel = document.getElementById('ghWf');
+  const wf = sel ? sel.value : '';
+  if (!wf) { toast('请先填写 workflow 文件名', 'err'); return; }
+  const btn = e && e.target && e.target.closest('[data-act="gh-run-wf"]');
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '触发中…'; }
+  try {
+    await ghFetch('/repos/' + g.repo + '/actions/workflows/' + encodeURIComponent(wf) + '/dispatches', {
+      method: 'POST', body: JSON.stringify({ ref: (g.info && g.info.branch) || 'main' }),
+    });
+    toast('已触发 CI：' + wf + '（约 10 秒后刷新可见）', 'ok');
+    setTimeout(() => ghLoadRuns(g.repo), 6000);
+  } catch (err) {
+    toast('触发失败：' + (err.message || err), 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = label || '触发 CI'; }
+}
+
+/* Agent 可调用的 GitHub 指令 */
+async function ghOp(o) {
+  const g = ghState();
+  const repo = o.repo || g.repo;
+  switch (o.op) {
+    case 'list': {
+      const t = await ghFetch('/repos/' + repo + '/contents/');
+      return '【' + repo + ' 根目录】\n' + (Array.isArray(t) ? t.map((x) => (x.type === 'dir' ? '📁 ' : '📄 ') + x.name).join('\n') : '（空）');
+    }
+    case 'read': {
+      const f = await ghFetch('/repos/' + repo + '/contents/' + o.path);
+      return '【' + repo + '/' + o.path + '】\n' + b64d(f.content).slice(0, 8000);
+    }
+    case 'write': {
+      let sha;
+      try { const cur = await ghFetch('/repos/' + repo + '/contents/' + o.path); sha = cur.sha; } catch (e) {}
+      const body = { message: o.message || ('chore: update ' + o.path), content: b64e(o.content || ''), branch: o.branch || 'main' };
+      if (sha) body.sha = sha;
+      const r = await ghFetch('/repos/' + repo + '/contents/' + o.path, { method: 'PUT', body: JSON.stringify(body) });
+      return '已提交 ' + repo + '/' + o.path + '（' + (r.commit ? r.commit.sha.slice(0, 7) : '') + '）';
+    }
+    case 'create': {
+      const r = await ghFetch('/user/repos', { method: 'POST', body: JSON.stringify({ name: o.name, description: (o.content || '').slice(0, 300), private: String(o.priv) !== 'false', auto_init: true }) });
+      S.settings.github.lastOk = now(); save();
+      return '已创建仓库 ' + r.full_name + '（' + (r.private ? '私有' : '公开') + '） ' + r.html_url;
+    }
+    case 'runs': {
+      const r = await ghFetch('/repos/' + repo + '/actions/runs?per_page=6');
+      const list = (r.workflow_runs || []);
+      return '【最近 CI 运行】\n' + (list.length ? list.map((x) => '- ' + x.name + ' · ' + x.status + (x.conclusion ? ' / ' + x.conclusion : '') + ' · ' + x.head_branch + ' · ' + x.created_at).join('\n') : '（没有运行记录）');
+    }
+    case 'run': {
+      await ghFetch('/repos/' + repo + '/actions/workflows/' + encodeURIComponent(o.workflow) + '/dispatches', { method: 'POST', body: JSON.stringify({ ref: o.branch || 'main' }) });
+      return '已触发 workflow ' + o.workflow + '（ref=' + (o.branch || 'main') + '）';
+    }
+    default: return '不支持的 GitHub 操作：' + o.op;
+  }
+}
+
+/* ------------------------- 工具指令统一分发 ------------------------- */
+async function execToolOp(o) {
+  if (o.type === 'doc') return execDocOp(o);
+  if (o.type === 'sandbox') return toolSandbox(o);
+  if (o.type === 'search') return toolSearch(o);
+  if (o.type === 'gh') return ghOp(o);
+  return '未知指令类型：' + o.type;
+}
+
+/* ------------------------- GitHub 视图 ------------------------- */
+function concludeTag(run) {
+  if (run.status !== 'completed') return '<span class="tag warn">' + (run.status === 'in_progress' ? '运行中' : run.status) + '</span>';
+  return run.conclusion === 'success' ? '<span class="tag ok">成功</span>' : '<span class="tag err">' + (run.conclusion || '失败') + '</span>';
+}
+
+function renderGithub() {
+  const gh = ghCfg();
+  const g = ghState();
+  const body = document.getElementById('body');
+  if (!body) return;
+  if (!gh.token) {
+    body.innerHTML = '<div class="scroll"><div class="page"><h2>GitHub</h2>' +
+      '<div class="sub">让 Agent 帮你建仓库、提交代码、跑 CI。先在设置里填 Personal Access Token。</div>' +
+      '<div class="empty">还没有配置 Token<br><br><button class="btn pri" data-act="goto-settings">去设置</button></div></div></div>';
+    return;
+  }
+  const repos = (g.repos || []).map((r) =>
+    '<div class="gh-repo" data-repo="' + esc(r.full) + '" data-act="gh-open">' +
+      '<span style="font-size:16px">' + (r.private ? '🔒' : '📖') + '</span>' +
+      '<div style="flex:1;min-width:0"><div class="rn">' + esc(r.full) + '</div>' +
+      '<div class="rd">' + esc(r.desc || '（无描述）') + ' · ' + esc(r.branch || 'main') + '</div></div>' +
+      '<span class="kv">' + (r.updated ? r.updated.slice(0, 10) : '') + '</span>' +
+    '</div>').join('');
+
+  let detail = '';
+  if (g.repo) {
+    const files = (g.tree || []).map((f) =>
+      '<div class="gh-file" data-path="' + esc(f.path) + '" data-act="gh-file">' + (f.type === 'dir' ? '📁' : '📄') + ' ' + esc(f.name) + '</div>').join('');
+    const runs = (g.runs || []).map((r) =>
+      '<div class="gh-file" style="cursor:default">' + concludeTag(r) +
+      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.name || '') + '</span>' +
+      '<span class="kv">' + esc(r.branch || '') + ' · ' + (r.at ? r.at.slice(5, 16).replace('T', ' ') : '') + '</span>' +
+      (r.url ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" style="font-size:11px">详情</a>' : '') + '</div>').join('');
+
+    let editor = '';
+    if (g.path) {
+      editor = '<div class="card"><h3>✎ ' + esc(g.path) + ' <span class="kv">' + fmtSize((g.file && g.file.size) || 0) + '</span>' +
+        '<span class="spacer"></span><button class="btn sm" data-act="gh-close-file">关闭</button></h3>' +
+        '<div class="fld"><label>提交信息</label><input id="ghMsg" value="update ' + esc(g.path) + '"></div>' +
+        '<div class="fld"><textarea id="ghEditor" rows="16" spellcheck="false">' + esc((g.file && g.file.content) || '') + '</textarea></div>' +
+        '<div class="row"><button class="btn pri fix" data-act="gh-save">提交到仓库</button></div></div>';
+    }
+
+    detail = '<div class="card"><h3>' + (g.info && g.info.private ? '🔒 ' : '📖 ') + esc(g.repo) +
+        '<span class="spacer"></span><button class="btn sm" data-act="gh-repos">← 返回仓库列表</button></h3>' +
+        '<div class="sub" style="margin:0 0 12px">' + esc((g.info && g.info.desc) || '') +
+        (g.info && g.info.url ? ' · <a href="' + esc(g.info.url) + '" target="_blank" rel="noopener">在 GitHub 打开</a>' : '') + '</div>' +
+        (files ? '<div class="fld"><label>仓库文件（根目录）</label>' + files + '</div>' : '<div class="kv">加载中…</div>') +
+      '</div>' +
+      editor +
+      '<div class="card"><h3>Actions / CI</h3>' +
+        '<div class="row"><input id="ghWf" class="fix" style="flex:1" placeholder="workflow 文件名，如 ci.yml">' +
+        '<button class="btn pri fix" data-act="gh-run-wf">触发 CI</button>' +
+        '<button class="btn fix" data-act="gh-refresh-runs">刷新</button></div>' +
+        '<div class="mt">' + (runs || '<div class="kv">还没有运行记录</div>') + '</div>' +
+      '</div>';
+  }
+
+  body.innerHTML = '<div class="scroll"><div class="page">' +
+    '<h2>GitHub</h2>' +
+    '<div class="sub">已连接 <b style="color:var(--accent)">@' + esc(gh.user || '未知') + '</b>' +
+      (gh.lastOk ? ' · ' + relTime(gh.lastOk) : '') + '</div>' +
+    (g.repo ? detail :
+      '<div class="row" style="margin-bottom:14px"><button class="btn pri fix" data-act="gh-newrepo">＋ 新建仓库</button>' +
+      '<button class="btn fix" data-act="gh-repos" style="display:none"></button>' +
+      '<span class="kv">共 ' + (g.repos || []).length + ' 个仓库</span></div>' +
+      (repos || '<div class="empty">还没有仓库，点上方「新建仓库」，或让 Agent 用 &lt;gh op="create"&gt; 创建</div>')) +
+  '</div></div>';
+}
+
+function openNewRepoDialog() {
+  modal('<h3>新建 GitHub 仓库</h3><div class="dsc">会在你的账号下创建，默认勾选自动初始化 README。</div>' +
+    '<div class="fld"><label>仓库名</label><input id="nrName" placeholder="my-project"></div>' +
+    '<div class="fld"><label>描述</label><input id="nrDesc" placeholder="可选"></div>' +
+    '<div class="switch"><div><div class="lbl">私有仓库</div><div class="dsc">建议个人项目保持私有</div></div>' +
+      '<div class="tgl on" data-nr-priv="1"></div></div>' +
+    '<div class="act"><button class="btn" data-x="c">取消</button><button class="btn pri" data-x="ok">创建</button></div>',
+    (m, close) => {
+      let priv = true;
+      m.addEventListener('click', async (ev) => {
+        const tgl = ev.target.closest('[data-nr-priv]');
+        if (tgl) { priv = !priv; tgl.classList.toggle('on', priv); return; }
+        const x = ev.target.closest('[data-x]'); if (!x) return;
+        if (x.dataset.x === 'ok') {
+          const name = ($('#nrName', m).value || '').trim();
+          if (!name) { toast('请填仓库名', 'err'); return; }
+          try {
+            const r = await ghFetch('/user/repos', { method: 'POST', body: JSON.stringify({ name, description: ($('#nrDesc', m).value || '').trim(), private: priv, auto_init: true }) });
+            toast('已创建 ' + r.full_name, 'ok');
+            close(); await ghLoadRepos(); ghOpenRepo(r.full_name);
+          } catch (err) { toast('创建失败：' + (err.message || err), 'err'); }
+          return;
+        }
+        close();
+      });
+    });
+}
+
+/* 工具类指令卡片的渲染 */
+function toolOpHTML(i, icon, title, body, o) {
+  const st = o.status === 'running' ? '<span class="tag warn">进行中</span>'
+    : o.status === 'error' ? '<span class="tag err">失败</span>' : '<span class="tag ok">已执行</span>';
+  return '<div class="op' + (o.status === 'error' ? ' open' : '') + '" data-op="' + i + '">' +
+    '<div class="oh"><span class="oi">' + icon + '</span><span class="ttl">' + title + '</span>' + st +
+    '<span class="chev">⌄</span></div>' +
+    '<div class="ob"><div class="prose">' + (body ? mdRender(body) : '<span class="kv">（无输出）</span>') + '</div></div></div>';
+}
+
+/* ------------------------- 启动（必须放在最后） ------------------------- */
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();

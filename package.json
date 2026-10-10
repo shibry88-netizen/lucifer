@@ -1,8 +1,8 @@
 {
   "name": "lucifer-chenxing",
-  "productName": "晨星",
+  "productName": "LUCIFER",
   "version": "1.0.0",
-  "description": "晨星 · LUCIFER —— 多智能体中枢",
+  "description": "LUCIFER —— 多智能体中枢",
   "private": true,
   "type": "module",
   "scripts": {
@@ -29,17 +29,29 @@
   },
   "build": {
     "appId": "com.lucifer.chenxing",
-    "productName": "晨星",
-    "directories": { "output": "release" },
-    "files": ["electron/**/*", "dist/**/*"],
+    "productName": "LUCIFER",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*"
+    ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "icon-512.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "晨星"
+      "shortcutName": "LUCIFER"
     }
   },
   "main": "electron/main.js"

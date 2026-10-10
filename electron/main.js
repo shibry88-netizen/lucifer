@@ -15,7 +15,7 @@ function createWindow() {
     height: 840,
     minWidth: 940,
     minHeight: 620,
-    title: '晨星 · LUCIFER',
+    title: 'LUCIFER',
     backgroundColor: '#0D0C0B',
     autoHideMenuBar: true,
     show: false,
