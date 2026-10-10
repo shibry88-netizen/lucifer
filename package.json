@@ -1,0 +1,46 @@
+{
+  "name": "lucifer-chenxing",
+  "productName": "晨星",
+  "version": "1.0.0",
+  "description": "晨星 · LUCIFER —— 多智能体中枢",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dist": "node build.mjs && node dist.mjs",
+    "serve": "node serve.mjs",
+    "tauri": "tauri",
+    "tauri:dev": "npm run dist && tauri dev",
+    "tauri:build": "npm run dist && tauri build",
+    "electron:dev": "npm run dist && electron .",
+    "electron:build": "npm run dist && electron-builder --win nsis",
+    "cap:add": "npx cap add android",
+    "cap:sync": "npm run dist && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "icon": "tauri icon icon-512.png"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0",
+    "@tauri-apps/cli": "^2.1.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.lucifer.chenxing",
+    "productName": "晨星",
+    "directories": { "output": "release" },
+    "files": ["electron/**/*", "dist/**/*"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "icon-512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "晨星"
+    }
+  },
+  "main": "electron/main.js"
+}

@@ -1,5 +1,5 @@
 /* =======================================================================
- * AgentHub · 多智能体中枢  ——  核心逻辑（Part 1 / 2）
+ * 晨星 · LUCIFER · 多智能体中枢  ——  核心逻辑（Part 1 / 3）
  * ===================================================================== */
 
 /* ------------------------- 基础工具 ------------------------- */
@@ -93,17 +93,31 @@ function mdRender(src) {
 }
 
 /* ------------------------- 预设 Provider ------------------------- */
+/* 主力：DeepSeek / 智谱 GLM / 小米 MiMo；中转站用于走 GPT 等海外模型 */
 const PRESETS = [
-  { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
-  { id: 'deepseek', name: 'DeepSeek 深度求索', baseUrl: 'https://api.deepseek.com/v1' },
-  { id: 'moonshot', name: 'Moonshot / Kimi', baseUrl: 'https://api.moonshot.cn/v1' },
-  { id: 'zhipu', name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4' },
-  { id: 'dashscope', name: '通义千问 DashScope', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
-  { id: 'siliconflow', name: 'SiliconFlow 硅基流动', baseUrl: 'https://api.siliconflow.cn/v1' },
-  { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
-  { id: 'ollama', name: 'Ollama（本地）', baseUrl: 'http://localhost:11434/v1' },
-  { id: 'lmstudio', name: 'LM Studio（本地）', baseUrl: 'http://localhost:1234/v1' },
-  { id: 'custom', name: '自定义地址', baseUrl: '' },
+  { id: 'deepseek', name: 'DeepSeek 深度求索', baseUrl: 'https://api.deepseek.com/v1', hint: '国内直连稳定' },
+  { id: 'zhipu', name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', hint: 'glm-4.6 / glm-4-plus' },
+  { id: 'mimo', name: '小米 MiMo', baseUrl: '', hint: '请填入你的 MiMo 接入地址' },
+  { id: 'relay', name: '中转站 / 自建代理', baseUrl: '', hint: '兼容 OpenAI 协议即可，走 GPT 等海外模型' },
+  { id: 'openai', name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', hint: '浏览器直连可能被 CORS 拦' },
+  { id: 'moonshot', name: 'Moonshot / Kimi', baseUrl: 'https://api.moonshot.cn/v1', hint: '' },
+  { id: 'dashscope', name: '通义千问 DashScope', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', hint: '' },
+  { id: 'siliconflow', name: 'SiliconFlow 硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', hint: '' },
+  { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', hint: '' },
+  { id: 'ollama', name: 'Ollama（本地）', baseUrl: 'http://localhost:11434/v1', hint: '' },
+  { id: 'lmstudio', name: 'LM Studio（本地）', baseUrl: 'http://localhost:1234/v1', hint: '' },
+  { id: 'custom', name: '自定义地址', baseUrl: '', hint: '' },
+];
+
+/* 主题预设（主色相 h / 饱和 s / 明度 l） */
+const THEMES = [
+  { id: 'gold',   name: '鎏金', h: 40, s: '50%', l: '58%' },
+  { id: 'bronze', name: '青铜', h: 28, s: '38%', l: '52%' },
+  { id: 'champ',  name: '香槟', h: 46, s: '42%', l: '66%' },
+  { id: 'indigo', name: '靛青', h: 232, s: '62%', l: '64%' },
+  { id: 'jade',   name: '青玉', h: 165, s: '46%', l: '52%' },
+  { id: 'rose',   name: '玫瑰', h: 348, s: '52%', l: '62%' },
+  { id: 'steel',  name: '冷灰', h: 210, s: '16%', l: '62%' },
 ];
 const EMOJIS = ['🧠','🤖','👨‍💻','👩‍💻','🕵️','📚','🔬','✍️','🎨','🎬','🎵','⚙️','🛠️','📊','🧩','🗂️','📝','🌐','🚀','🛡️','🧪','💡','🧭','🎯','🐧','🐳','☁️','🔮','🦾','🪄'];
 
@@ -130,15 +144,19 @@ const MAIN_PROMPT = `你是「总控 Agent」，一支多智能体团队的指�
 - 重要结论与交接信息必须写进文档，而不是只留在对话里。`;
 
 function defaultState() {
-  const pid = 'openai';
+  const pid = 'deepseek';
   return {
-    v: 2,
+    v: 3,
     settings: {
-      providers: [{ id: pid, name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiKey: '', models: [] }],
+      providers: [{ id: pid, name: 'DeepSeek 深度求索', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', models: ['deepseek-chat', 'deepseek-reasoner'] }],
       activeProviderId: pid,
-      defaultModel: '',
-      sandbox: { endpoint: '', apiKey: '', enabled: false, provider: 'e2b' },
+      defaultModel: 'deepseek-chat',
+      sandbox: { endpoint: '', apiKey: '', enabled: false, provider: 'e2b', lastOk: 0, note: '' },
       maxRounds: 6,
+      theme: {
+        mode: 'dark', preset: 'gold', h: 40, s: '50%', l: '58%',
+        radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false,
+      },
     },
     agents: [{
       id: 'main', isMain: true, name: '总控', roleName: 'main', avatar: '🧠',
@@ -154,17 +172,27 @@ function defaultState() {
     ui: {
       view: 'chat', activeAgentId: 'main', activeTopicId: null, editAgentId: null,
       editTab: 'base', activeDocId: null, collapsed: false, drafting: '', statsOpen: false, _q: '',
+      sideOpen: false, search: '', searchScope: 'all', tab: 'chat', docView: null,
     },
   };
 }
 
 /* ------------------------- 状态 ------------------------- */
-const KEY = 'agenthub.state.v2';
+const KEY = 'lucifer.state.v1';
+const LEGACY_KEYS = ['agenthub.state.v2', 'agenthub.state.v1', 'lucifer.state.v0'];
+function readStored() {
+  try {
+    const v = localStorage.getItem(KEY);
+    if (v) return v;
+    for (const k of LEGACY_KEYS) { const o = localStorage.getItem(k); if (o) return o; }
+  } catch (e) {}
+  return null;
+}
 let S = null, ABORT = null, RUNNING = false;
 
 function load() {
   try {
-    const raw = localStorage.getItem(KEY) || localStorage.getItem('agenthub.state.v1');
+    const raw = readStored();
     if (!raw) return defaultState();
     const o = JSON.parse(raw); const d = defaultState();
     o.settings = Object.assign(d.settings, o.settings || {});
@@ -173,6 +201,7 @@ function load() {
     o.docs = Array.isArray(o.docs) ? o.docs : d.docs;
     o.topics = Array.isArray(o.topics) ? o.topics : [];
     o.ui = Object.assign(d.ui, o.ui || {});
+    o.settings.theme = Object.assign(d.settings.theme, (o.settings || {}).theme || {});
     if (!o.agents.some((a) => a.isMain)) o.agents.unshift(d.agents[0]);
     o.agents.forEach((a) => {
       a.skills = a.skills || [];
@@ -381,7 +410,16 @@ function buildSystem(agent) {
   if (agent.tools && agent.tools.delegate) parts.push('\n\n【团队成员名录】\n' + teamRoster(agent.id) + '\n\n派发任务时使用 @角色名。');
   if (agent.skills && agent.skills.length) parts.push('\n\n【已装载 Skills】\n' + agent.skills.map((s) => '### ' + s.name + '\n' + (s.content || '').slice(0, 2200)).join('\n\n'));
   const ds = docsFor(agent.id);
-  if (ds.length) parts.push('\n\n【可用文档索引】\n' + ds.map((d) => '- ' + d.title + '（更新于 ' + relTime(d.updatedAt) + '）').join('\n') + '\n\n需要正文时使用 <doc op="read" title="标题"/>。');
+  if (ds.length) {
+    const rich = ds.map((d) => {
+      const c = d.content || '';
+      const head = '### ' + d.title + '（' + c.length + ' 字 · ' + relTime(d.updatedAt) + '）';
+      if (c.length <= 1500) return head + '\n' + c;
+      return head + '\n摘要：' + c.slice(0, 700) + '…';
+    }).join('\n\n');
+    parts.push('\n\n【团队文档库】以下文档你可以直接阅读，无需额外请求：\n\n' + rich +
+      '\n\n若需要某篇的完整正文，用 <doc op="read" title="标题"/>；查看全部标题用 <doc op="list"/>。');
+  }
   parts.push(S.settings.sandbox && S.settings.sandbox.enabled
     ? '\n\n【云沙盒】已配置：' + S.settings.sandbox.provider + ' @ ' + S.settings.sandbox.endpoint
     : '\n\n【云沙盒】未配置（由使用者自行添加，当前不可用）。');

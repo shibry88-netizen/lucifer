@@ -1,5 +1,5 @@
 /* =======================================================================
- * AgentHub · 多智能体中枢  ——  渲染与交互（Part 2 / 2）
+ * 晨星 · LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 3）
  * ===================================================================== */
 
 /* ------------------------- 头像 ------------------------- */
@@ -17,43 +17,53 @@ function renderShell() {
   const p = providerFor(a);
   const v = S.ui.view;
   const right = v === 'chat'
-    ? '<button class="btn" data-act="newtopic">＋ 新会话</button>'
-      + '<button class="btn" data-act="goto-docs">文档</button>'
-      + '<button class="btn" data-act="goto-settings">设置</button>'
-      + (isMain(a) ? '' : '<button class="btn" data-act="editagent">Agent 设置</button>')
-    : '<button class="btn" data-act="goto-chat">← 返回对话</button>';
+    ? '<button class="btn sm" data-act="newtopic">＋ 新会话</button>'
+      + '<button class="btn sm" data-act="goto-search">检索</button>'
+      + '<button class="btn sm" data-act="goto-docs">文档</button>'
+      + '<button class="btn sm" data-act="goto-settings">设置</button>'
+      + (isMain(a) ? '' : '<button class="btn sm pri" data-act="editagent">Agent 设置</button>')
+    : '<button class="btn sm" data-act="goto-chat">← 返回对话</button>';
 
   document.getElementById('app').innerHTML =
-  '<aside class="side glass">' +
+  '<aside class="side' + (S.ui.sideOpen ? ' open' : '') + '">' +
     '<div class="side-head">' +
-      '<div class="logo">◈</div>' +
-      '<div class="brand"><b>AgentHub</b><span>多智能体中枢 · liquid v0.2</span></div>' +
+      '<div class="logo">' + STAR_SVG + '</div>' +
+      '<div class="brand"><b class="gold-text">晨星</b><span>LUCIFER ' + VERSION + '</span></div>' +
     '</div>' +
-    '<div class="side-search"><input id="agentSearch" placeholder="搜索 Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
+    '<div class="side-search"><input id="agentSearch" placeholder="搜索会话 / Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
     '<div class="side-scroll">' +
       '<div class="side-label">主控</div><div id="mainList"></div>' +
       '<div class="side-label">Agents <button data-act="addagent" title="新建 Agent">＋</button></div><div id="subList"></div>' +
+      '<div class="side-label">会话 <button data-act="newtopic" title="新会话">＋</button></div><div id="topicList"></div>' +
     '</div>' +
     '<div class="side-foot">' +
+      '<button data-act="goto-search"><span class="ico">⌕</span><span>历史检索</span></button>' +
       '<button data-act="goto-docs"><span class="ico">▤</span><span>文档库</span></button>' +
-      '<button data-act="goto-settings"><span class="ico">⚙</span><span>设置（API / 云沙盒）</span></button>' +
+      '<button data-act="goto-settings"><span class="ico">⚙</span><span>设置</span></button>' +
     '</div>' +
   '</aside>' +
+  '<div class="side-mask" data-act="close-side"></div>' +
   '<main class="main">' +
-    '<header class="top glass">' +
-      '<button class="icon-btn burger" data-act="toggle-side" title="菜单 / 添加 Agent"><i></i><i></i><i></i></button>' +
-      avatarHTML(a, 'lg') +
+    '<header class="top">' +
+      '<button class="icon-btn burger" data-act="toggle-side" title="菜单"><i></i><i></i><i></i></button>' +
+      avatarHTML(a, 'lg' + (isMain(a) ? ' main-ring' : '')) +
       '<div class="top-info">' +
         '<div class="t1"><b>' + esc(a.name) + '</b><span class="tag ' + (isMain(a) ? 'main' : '') + '">@' + esc(a.roleName) + '</span></div>' +
         '<div class="t2">' + esc(m || '未选择模型') + ' · ' + esc(p ? p.name : '无 API 配置') + '</div>' +
       '</div>' +
-      '<div class="spacer"></div>' + right +
+      '<div class="spacer"></div>' +
+      '<div class="top-actions">' + right + '</div>' +
     '</header>' +
     '<div class="body" id="body"></div>' +
+    '<nav class="tabbar" id="tabbar"></nav>' +
   '</main>';
 
-  if (S.ui.collapsed) document.getElementById('app').classList.add('collapsed');
+  const app = document.getElementById('app');
+  if (S.ui.collapsed) app.classList.add('collapsed');
+  if (S.ui.sideOpen) app.classList.add('side-open');
   renderAgentLists();
+  renderTopicList();
+  renderTabbar();
   renderView();
 }
 
@@ -79,7 +89,10 @@ function renderView() {
   if (v === 'docs') renderDocs();
   else if (v === 'settings') renderSettings();
   else if (v === 'agent') renderAgentEdit();
+  else if (v === 'search') renderSearch();
   else renderChat();
+  const tb = document.getElementById('tabbar');
+  if (tb) Array.from(tb.querySelectorAll('.tab')).forEach((x) => x.classList.toggle('on', x.dataset.tab === (v === 'chat' ? 'chat' : v)));
 }
 
 /* ------------------------- 消息渲染 ------------------------- */
@@ -95,10 +108,12 @@ function msgHTML(m, agent) {
       '<div class="bd"><div class="prose">' + mdRender(m.content) + '</div></div></div>';
   }
   const ops = (m.ops || []).map((o, i) => opHTML(o, i)).join('');
-  return '<div class="msg assistant">' + avatarHTML(agent) + '<div class="bd">' +
+  const dchips = docChipsFor(m);
+  return '<div class="msg assistant">' + avatarHTML(agent, isMain(agent) ? 'main-ring' : '') + '<div class="bd">' +
     '<div class="hd"><b>' + esc(agent.name) + '</b><span class="tag">@' + esc(agent.roleName) + '</span>' +
     (m.round > 1 ? '<span class="tag">第 ' + m.round + ' 轮</span>' : '') + '</div>' +
     '<div class="prose">' + (m.content ? mdRender(m.content) : '<span class="dim">（无正文输出）</span>') + '</div>' +
+    (dchips ? '<div style="margin-top:10px">' + dchips + '</div>' : '') +
     (ops ? '<div class="ops">' + ops + '</div>' : '') + '</div></div>';
 }
 function opHTML(o, i) {
@@ -114,10 +129,14 @@ function opHTML(o, i) {
       '<div class="kv mt">回执</div><div class="prose">' + (o.result ? mdRender(o.result) : '<span class="spin"></span>') + '</div></div></div>';
   }
   const label = ({ create: '创建', append: '追加', update: '更新', read: '读取', list: '列举', delete: '删除' })[o.op] || o.op;
+  const doc = o.title ? findDoc(o.title) : null;
+  const openBtn = doc
+    ? '<button class="btn sm" style="margin-top:10px" data-act="viewdoc" data-id="' + doc.id + '">在对话内查看全文</button>'
+    : '';
   return '<div class="op" data-op="' + i + '">' +
     '<div class="oh"><span class="oi">▤</span><span class="ttl">文档 · ' + esc(label) + (o.title ? '「' + esc(o.title) + '」' : '') + '</span>' +
     '<span class="tag ok">已执行</span><span class="chev">⌄</span></div>' +
-    '<div class="ob"><div class="prose">' + mdRender(o.result || '') + '</div></div></div>';
+    '<div class="ob"><div class="prose">' + mdRender((o.result || '').slice(0, 4000)) + '</div>' + openBtn + '</div></div>';
 }
 
 /* ------------------------- 统计气泡 ------------------------- */
@@ -168,7 +187,7 @@ function renderChat() {
     '<div class="composer"><div class="composer-in">' +
       statsBubbleHTML(topic) +
       '<div class="cbox glass">' +
-        '<textarea id="input" rows="1" placeholder="给 ' + esc(a.name) + ' 发消息…  （用 @ 可提及团队 Agent）"></textarea>' +
+        '<textarea id="input" rows="1" placeholder="给 ' + esc(a.name) + ' 发消息…"></textarea>' +
         '<div class="crow">' +
           '<button class="icon-btn" data-act="evac" title="召集全员协作">⚡</button>' +
           '<button class="icon-btn" data-act="mention" title="提及 Agent">@</button>' +
@@ -512,6 +531,7 @@ function renderSettings() {
   const ps = S.settings.providers;
   const ap = getProvider(S.settings.activeProviderId) || ps[0];
   const sb = S.settings.sandbox;
+  const th = Object.assign({ mode: 'dark', preset: 'gold', radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false }, S.settings.theme || {});
   $('#body').innerHTML =
   '<div class="scroll"><div class="page">' +
     '<h2>设置</h2>' +
@@ -522,7 +542,7 @@ function renderSettings() {
         '<select id="cfgPick">' + ps.map((p) => '<option value="' + p.id + '"' + (p.id === ap.id ? ' selected' : '') + '>' + esc(p.name) + ' — ' + esc(p.baseUrl || '未填地址') + '</option>').join('') + '</select>' +
         '<button class="btn fix" data-act="addProvider">＋ 新增</button></div></div>' +
       '<div class="fld"><label>预设（选中自动填地址，可再改）</label><select id="cfgPreset">' +
-        PRESETS.map((p) => '<option value="' + p.id + '"' + (p.baseUrl === ap.baseUrl ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select></div>' +
+        PRESETS.map((p) => '<option value="' + p.id + '"' + (p.baseUrl === ap.baseUrl ? ' selected' : '') + '>' + esc(p.name) + (p.hint ? ' —— ' + esc(p.hint) : '') + '</option>').join('') + '</select></div>' +
       '<div class="fld"><label>名称</label><input id="cfgName" value="' + esc(ap.name) + '"></div>' +
       '<div class="fld"><label>API Base URL（需兼容 OpenAI 协议：/chat/completions、/models）</label><input id="cfgUrl" value="' + esc(ap.baseUrl) + '" placeholder="https://api.example.com/v1"></div>' +
       '<div class="fld"><label>API Key</label><input id="cfgKey" type="password" value="' + esc(ap.apiKey) + '" placeholder="sk-…"></div>' +
@@ -549,9 +569,30 @@ function renderSettings() {
       '<div class="fld"><label>沙盒 API Key</label><input id="sbKey" type="password" value="' + esc(sb.apiKey) + '" placeholder="填入你自己的沙盒密钥"></div>' +
       '<div class="switch"><div><div class="lbl">启用云沙盒</div><div class="dsc">仅在你填好 Endpoint / Key 后打开</div></div>' +
         '<div class="tgl' + (sb.enabled ? ' on' : '') + '" data-tool="sandbox"></div></div>' +
+      '<div class="row mt"><button class="btn pri fix" data-act="sandbox-test">测试云沙盒</button>' +
+        '<span class="kv">' + (sb.lastOk ? '上次连通：' + relTime(sb.lastOk) : '尚未测试连通') + '</span></div>' +
+      '<div class="hint2 mt">协议：<code>POST /sandboxes</code> 创建 · <code>POST /sandboxes/{id}/code</code> 执行 · <code>DELETE /sandboxes/{id}</code> 销毁（e2b 兼容）。浏览器直连沙盒可能被 CORS 拦，桌面端不受影响。</div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>③ 数据</h3>' +
+    '<div class="card glass"><h3>③ 主题外观</h3>' +
+      '<div class="switch"><div><div class="lbl">配色模式</div><div class="dsc">暗金（默认）/ 亮白 / 跟随系统</div></div>' +
+        '<div class="chips" style="margin:0">' + [['dark','暗金'],['light','亮白'],['auto','跟随系统']].map(([k, n]) =>
+          '<span class="chip' + ((th.mode === k) ? ' on' : '') + '" data-theme-mode="' + k + '">' + n + '</span>').join('') + '</div>' +
+      '</div>' +
+      '<div class="fld mt"><label>主色</label><div class="swatches">' + THEMES.map((t) =>
+        '<div class="swatch' + (th.preset === t.id && !th.custom ? ' on' : '') + '" data-theme-preset="' + t.id + '" title="' + esc(t.name) + '" style="background:linear-gradient(135deg,hsl(' + t.h + ' ' + t.s + ' ' + (parseInt(t.l, 10) - 20) + '%),hsl(' + t.h + ' ' + t.s + ' ' + t.l + '),hsl(' + t.h + ' ' + t.s + ' ' + (parseInt(t.l, 10) + 16) + '%))"></div>').join('') +
+      '</div>' +
+      '<div class="slider mt"><input type="range" min="0" max="360" value="' + (th.h || 40) + '" data-knob="h"><span class="val">' + (th.h || 40) + '°</span></div>' +
+      '<div class="hint2">拖动色相环可自定义主色（0=红 · 40=金 · 165=青 · 232=靛）</div></div>' +
+      '<div class="fld"><label>磨砂强度</label><div class="slider"><input type="range" min="0" max="40" value="' + th.glassBlur + '" data-knob="glassBlur"><span class="val">' + th.glassBlur + 'px</span></div></div>' +
+      '<div class="fld"><label>圆角</label><div class="slider"><input type="range" min="0.6" max="1.5" step="0.05" value="' + th.radius + '" data-knob="radius"><span class="val">×' + th.radius + '</span></div></div>' +
+      '<div class="fld"><label>字号</label><div class="slider"><input type="range" min="0.9" max="1.15" step="0.01" value="' + th.fontScale + '" data-knob="fontScale"><span class="val">×' + th.fontScale + '</span></div></div>' +
+      '<div class="switch"><div><div class="lbl">背景薄光</div><div class="dsc">关闭后更沉稳、更省电</div></div>' +
+        '<div class="tgl' + (th.aurora ? ' on' : '') + '" data-tgl-theme="aurora"></div></div>' +
+      '<div class="row mt"><button class="btn fix" data-act="resetTheme">恢复默认外观</button></div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>④ 数据</h3>' +
       '<div class="sub" style="margin:0 0 12px">Agent ' + S.agents.length + ' 个 · 文档 ' + S.docs.length + ' 篇 · 会话 ' + S.topics.length + ' 个</div>' +
       '<div class="row">' +
         '<button class="btn fix" data-act="exportData">导出全部数据 (JSON)</button>' +
@@ -567,7 +608,12 @@ function renderSettings() {
   const pre = $('#cfgPreset');
   if (pre) pre.addEventListener('change', () => {
     const p = PRESETS.find((x) => x.id === pre.value);
-    if (p && p.baseUrl) { const u = $('#cfgUrl'), n = $('#cfgName'); if (u) u.value = p.baseUrl; if (n && p.id !== 'custom') n.value = p.name; }
+    if (!p) return;
+    const u = $('#cfgUrl'), n = $('#cfgName');
+    if (u && p.baseUrl) u.value = p.baseUrl;
+    if (n && p.id !== 'custom') n.value = p.name;
+    if (!p.baseUrl && p.hint) toast(p.name + '：' + p.hint, '');
+    else if (!p.baseUrl) toast('请在下方填入 ' + p.name + ' 的 API 地址', '');
   });
   ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey'].forEach((sel) => {
     const e = $(sel); if (e) e.addEventListener('change', () => { persistCfg(); save(); });
@@ -671,6 +717,28 @@ function wireGlobal() {
     const mi = t.closest('[data-mention]');
     if (mi) return;
 
+    const tMode = t.closest('[data-theme-mode]');
+    if (tMode) { S.settings.theme.mode = tMode.dataset.themeMode; applyTheme(); save(); renderSettings(); return; }
+    const tglTh = t.closest('[data-tgl-theme]');
+    if (tglTh) {
+      const k = tglTh.dataset.tglTheme;
+      S.settings.theme[k] = !S.settings.theme[k];
+      applyTheme(); save(); renderSettings(); return;
+    }
+    const sw = t.closest('[data-theme-preset]');
+    if (sw) {
+      const p = THEMES.find((x) => x.id === sw.dataset.themePreset);
+      if (p) { Object.assign(S.settings.theme, { preset: p.id, h: p.h, s: p.s, l: p.l, custom: false }); applyTheme(); save(); renderSettings(); }
+      return;
+    }
+    const openT = t.closest('[data-topic]');
+    if (openT && !t.closest('[data-act]')) {
+      S.ui.activeTopicId = openT.dataset.topic;
+      const tt = S.topics.find((x) => x.id === openT.dataset.topic);
+      if (tt) S.ui.activeAgentId = tt.agentId;
+      S.ui.view = 'chat'; S.ui.drafting = '';
+      closeSideMobile(); save(); renderShell(); return;
+    }
     const setDef = t.closest('[data-setdefault]');
     if (setDef) { e.preventDefault(); S.settings.defaultModel = setDef.dataset.setdefault; save(); renderSettings(); toast('默认模型：' + setDef.dataset.setdefault, 'ok'); return; }
 
@@ -680,8 +748,18 @@ function wireGlobal() {
   });
 
   document.addEventListener('input', (e) => {
-    if (e.target && e.target.id === 'agentSearch') {
-      S.ui._q = e.target.value; renderAgentLists();
+    const t = e.target;
+    if (!t) return;
+    if (t.id === 'agentSearch') { S.ui._q = t.value; renderAgentLists(); renderTopicList(); return; }
+    if (t.id === 'q') { S.ui.search = t.value; clearTimeout(window.__sq); window.__sq = setTimeout(() => renderSearchHits(), 160); return; }
+    if (t.dataset && t.dataset.knob) {
+      const k = t.dataset.knob, v = parseFloat(t.value);
+      const th = S.settings.theme;
+      if (k === 'h') { th.h = v; th.custom = true; applyTheme(); }
+      else { th[k] = v; applyTheme(); }
+      const lab = t.parentElement && t.parentElement.querySelector('.val');
+      if (lab) lab.textContent = (k === 'h') ? v + '°' : (k === 'radius' || k === 'fontScale') ? '×' + v : v + 'px';
+      clearTimeout(window.__st); window.__st = setTimeout(save, 250);
     }
   });
 
@@ -721,9 +799,79 @@ function saveDocIfDirty() {
 async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
+    case 'goto-search': { S.ui.view = 'search'; closeSideMobile(); save(); renderShell(); setTimeout(() => { const i = $('#q'); if (i) i.focus(); }, 30); return; }
+    case 'viewdoc': { openDocDrawer(e && e.target && e.target.closest('[data-id]') ? e.target.closest('[data-id]').dataset.id : S.ui.activeDocId); return; }
+    case 'closedoc': { closeDocDrawer(); return; }
+    case 'opendoclib': { const id = S.ui.docView; closeDocDrawer(); S.ui.activeDocId = id; S.ui.view = 'docs'; save(); renderShell(); return; }
+    case 'save-clip': {
+      const clip = S.ui.searchHitText || '';
+      if (!clip) return;
+      S.docs.unshift({ id: uid('d'), title: '检索摘录 ' + fmtTime(now()), content: clip, ownerId: S.ui.activeAgentId, shared: true, updatedAt: now() });
+      save(); toast('已存入文档库', 'ok'); return;
+    }
+    case 'theme-mode': {
+      const m = e.target.closest('[data-theme-mode]');
+      if (m) { S.settings.theme.mode = m.dataset.themeMode; applyTheme(); save(); renderSettings(); }
+      return;
+    }
+    case 'resetTheme': {
+      S.settings.theme = { mode: 'dark', preset: 'gold', h: 40, s: '50%', l: '58%', radius: 1, fontScale: 1, glassBlur: 20, aurora: true, custom: false };
+      applyTheme(); save(); renderSettings(); toast('已恢复默认外观', 'ok'); return;
+    }
+    case 'sandbox-test': { await testSandbox(e); return; }
+    case 'close-side': { closeSideMobile(); return; }
+    case 'switch-topic': {
+      const id = e.target.closest('[data-topic]') && e.target.closest('[data-topic]').dataset.topic;
+      if (!id) return;
+      const t = S.topics.find((x) => x.id === id); if (!t) return;
+      S.ui.activeTopicId = id; S.ui.activeAgentId = t.agentId; S.ui.view = 'chat'; S.ui.drafting = '';
+      closeSideMobile(); save(); renderShell(); return;
+    }
+    case 'del-topic': {
+      const el = e.target.closest('[data-topic]');
+      const id = el && el.dataset.topic; if (!id) return;
+      modal('<h3>删除会话</h3><div class="dsc">该会话的全部消息与统计将一并删除，不可恢复。</div>' +
+        '<div class="act"><button class="btn" data-x="c">取消</button><button class="btn danger" data-x="ok">删除</button></div>',
+        (m, close) => {
+          m.addEventListener('click', (ev) => {
+            const x = ev.target.closest('[data-x]'); if (!x) return;
+            if (x.dataset.x === 'ok') {
+              S.topics = S.topics.filter((t) => t.id !== id);
+              if (S.ui.activeTopicId === id) S.ui.activeTopicId = null;
+              save(); renderShell(); toast('已删除', 'ok');
+            }
+            close();
+          });
+        });
+      return;
+    }
+    case 'rename-topic': {
+      const el = e.target.closest('[data-topic]');
+      const t = el && S.topics.find((x) => x.id === el.dataset.topic); if (!t) return;
+      modal('<h3>重命名会话</h3><div class="fld"><input id="tpName" value="' + esc(t.title) + '"></div>' +
+        '<div class="act"><button class="btn" data-x="c">取消</button><button class="btn pri" data-x="ok">保存</button></div>',
+        (m, close) => {
+          setTimeout(() => { const i = $('#tpName'); if (i) { i.focus(); i.select(); } }, 30);
+          m.addEventListener('click', (ev) => {
+            const x = ev.target.closest('[data-x]'); if (!x) return;
+            if (x.dataset.x === 'ok') { const i = $('#tpName'); t.title = (i && i.value.trim()) || t.title; save(); renderShell(); }
+            close();
+          });
+        });
+      return;
+    }
     case 'toggle-side': {
-      S.ui.collapsed = !S.ui.collapsed;
-      document.getElementById('app').classList.toggle('collapsed', S.ui.collapsed);
+      if (window.matchMedia('(max-width:639px)').matches) {
+        S.ui.sideOpen = !S.ui.sideOpen;
+        const app = document.getElementById('app');
+        const sd = document.querySelector('.side');
+        if (app) app.classList.toggle('side-open', S.ui.sideOpen);
+        if (sd) sd.classList.toggle('open', S.ui.sideOpen);
+      } else {
+        S.ui.collapsed = !S.ui.collapsed;
+        const app = document.getElementById('app');
+        if (app) app.classList.toggle('collapsed', S.ui.collapsed);
+      }
       save(); return;
     }
     case 'goto-chat': {
@@ -934,18 +1082,44 @@ function openNewAgentDialog() {
 /* ------------------------- 启动 ------------------------- */
 function boot() {
   S = load();
+  applyTheme();
   if (!S.topics.length) ensureTopic(S.ui.activeAgentId);
   renderShell();
   wireGlobal();
-  window.addEventListener('resize', () => { const ta = $('#input'); if (ta) autoGrow(ta); });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { hideMention(); const m = $('.mask'); }
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
-      if (S.ui.view !== 'chat' && S.ui.view !== 'docs' && S.ui.view !== 'settings') return;
-      e.preventDefault(); S.ui.collapsed = !S.ui.collapsed;
-      document.getElementById('app').classList.toggle('collapsed', S.ui.collapsed); save();
+
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => { if ((S.settings.theme || {}).mode === 'auto') applyTheme(); });
+  } catch (e) {}
+
+  window.addEventListener('resize', () => {
+    const ta = $('#input'); if (ta) autoGrow(ta);
+    if (!window.matchMedia('(max-width:639px)').matches && S.ui.sideOpen) {
+      S.ui.sideOpen = false;
+      const app = document.getElementById('app'); if (app) app.classList.remove('side-open');
+      const sd = document.querySelector('.side'); if (sd) sd.classList.remove('open');
     }
   });
+
+  document.addEventListener('keydown', (e) => {
+    const mod = e.metaKey || e.ctrlKey;
+    if (e.key === 'Escape') { hideMention(); closeDocDrawer(); closeSideMobile(); return; }
+    if (mod && e.key.toLowerCase() === 'k') {
+      e.preventDefault(); gotoView('search');
+      setTimeout(() => { const i = $('#q'); if (i) i.focus(); }, 40); return;
+    }
+    if (mod && e.key.toLowerCase() === 'b') {
+      e.preventDefault(); S.ui.collapsed = !S.ui.collapsed;
+      const app = document.getElementById('app'); if (app) app.classList.toggle('collapsed', S.ui.collapsed);
+      save(); return;
+    }
+    if (mod && e.key.toLowerCase() === 'n') {
+      e.preventDefault(); newTopic(curAgent().id); S.ui.view = 'chat'; save(); renderShell(); return;
+    }
+  });
+
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
 }
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-else boot();
+/* 启动由 Part 3 末尾负责（Part 3 需先完成顶层初始化） */
