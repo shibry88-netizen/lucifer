@@ -1,0 +1,951 @@
+/* =======================================================================
+ * AgentHub · 多智能体中枢  ——  渲染与交互（Part 2 / 2）
+ * ===================================================================== */
+
+/* ------------------------- 头像 ------------------------- */
+function avatarHTML(a, cls) {
+  const v = (a && a.avatar) || '🤖';
+  const c = 'av ' + (cls || '');
+  if (/^(data:|https?:|blob:)/.test(v)) return '<img class="' + c + '" src="' + esc(v) + '" alt="">';
+  return '<span class="' + c + '">' + esc(v) + '</span>';
+}
+
+/* ------------------------- 外壳 ------------------------- */
+function renderShell() {
+  const a = curAgent();
+  const m = modelFor(a);
+  const p = providerFor(a);
+  const v = S.ui.view;
+  const right = v === 'chat'
+    ? '<button class="btn" data-act="newtopic">＋ 新会话</button>'
+      + '<button class="btn" data-act="goto-docs">文档</button>'
+      + '<button class="btn" data-act="goto-settings">设置</button>'
+      + (isMain(a) ? '' : '<button class="btn" data-act="editagent">Agent 设置</button>')
+    : '<button class="btn" data-act="goto-chat">← 返回对话</button>';
+
+  document.getElementById('app').innerHTML =
+  '<aside class="side glass">' +
+    '<div class="side-head">' +
+      '<div class="logo">◈</div>' +
+      '<div class="brand"><b>AgentHub</b><span>多智能体中枢 · liquid v0.2</span></div>' +
+    '</div>' +
+    '<div class="side-search"><input id="agentSearch" placeholder="搜索 Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
+    '<div class="side-scroll">' +
+      '<div class="side-label">主控</div><div id="mainList"></div>' +
+      '<div class="side-label">Agents <button data-act="addagent" title="新建 Agent">＋</button></div><div id="subList"></div>' +
+    '</div>' +
+    '<div class="side-foot">' +
+      '<button data-act="goto-docs"><span class="ico">▤</span><span>文档库</span></button>' +
+      '<button data-act="goto-settings"><span class="ico">⚙</span><span>设置（API / 云沙盒）</span></button>' +
+    '</div>' +
+  '</aside>' +
+  '<main class="main">' +
+    '<header class="top glass">' +
+      '<button class="icon-btn burger" data-act="toggle-side" title="菜单 / 添加 Agent"><i></i><i></i><i></i></button>' +
+      avatarHTML(a, 'lg') +
+      '<div class="top-info">' +
+        '<div class="t1"><b>' + esc(a.name) + '</b><span class="tag ' + (isMain(a) ? 'main' : '') + '">@' + esc(a.roleName) + '</span></div>' +
+        '<div class="t2">' + esc(m || '未选择模型') + ' · ' + esc(p ? p.name : '无 API 配置') + '</div>' +
+      '</div>' +
+      '<div class="spacer"></div>' + right +
+    '</header>' +
+    '<div class="body" id="body"></div>' +
+  '</main>';
+
+  if (S.ui.collapsed) document.getElementById('app').classList.add('collapsed');
+  renderAgentLists();
+  renderView();
+}
+
+function renderAgentLists() {
+  const q = (S.ui._q || '').toLowerCase();
+  const f = (a) => !q || a.name.toLowerCase().includes(q) || a.roleName.toLowerCase().includes(q);
+  const item = (a) =>
+    '<div class="agent-item' + (a.id === S.ui.activeAgentId ? ' on' : '') + '" data-agent="' + a.id + '">' +
+      avatarHTML(a) +
+      '<div class="meta"><div class="nm">' + esc(a.name) + '</div>' +
+      '<div class="rl">@' + esc(a.roleName) + ((a.skills && a.skills.length) ? ' · ' + a.skills.length + ' skill' : '') + '</div></div>' +
+    '</div>';
+  const ml = $('#mainList'), sl = $('#subList');
+  const mains = S.agents.filter((a) => a.isMain && f(a));
+  const subs = S.agents.filter((a) => !a.isMain && f(a));
+  if (ml) ml.innerHTML = mains.map(item).join('') || '<div class="kv pad">无</div>';
+  if (sl) sl.innerHTML = subs.map(item).join('') || '<div class="kv pad">还没有其他 Agent，点上方 ＋ 新建</div>';
+}
+
+/* ------------------------- 视图分发 ------------------------- */
+function renderView() {
+  const v = S.ui.view;
+  if (v === 'docs') renderDocs();
+  else if (v === 'settings') renderSettings();
+  else if (v === 'agent') renderAgentEdit();
+  else renderChat();
+}
+
+/* ------------------------- 消息渲染 ------------------------- */
+function msgHTML(m, agent) {
+  if (m.role === 'user') {
+    if (m._synthetic) {
+      return '<div class="msg-sys"><div class="op">' +
+        '<div class="oh"><span class="oi">⟲</span><span class="ttl">系统回执（已回传给 ' + esc(agent.name) + '）</span>' +
+        '<span class="tag">' + (m.content || '').length + ' 字</span><span class="chev">⌄</span></div>' +
+        '<div class="ob"><div class="prose">' + mdRender(m.content) + '</div></div></div></div>';
+    }
+    return '<div class="msg user">' + avatarHTML({ avatar: '🙋' }) +
+      '<div class="bd"><div class="prose">' + mdRender(m.content) + '</div></div></div>';
+  }
+  const ops = (m.ops || []).map((o, i) => opHTML(o, i)).join('');
+  return '<div class="msg assistant">' + avatarHTML(agent) + '<div class="bd">' +
+    '<div class="hd"><b>' + esc(agent.name) + '</b><span class="tag">@' + esc(agent.roleName) + '</span>' +
+    (m.round > 1 ? '<span class="tag">第 ' + m.round + ' 轮</span>' : '') + '</div>' +
+    '<div class="prose">' + (m.content ? mdRender(m.content) : '<span class="dim">（无正文输出）</span>') + '</div>' +
+    (ops ? '<div class="ops">' + ops + '</div>' : '') + '</div></div>';
+}
+function opHTML(o, i) {
+  if (o.type === 'call') {
+    const sub = S.agents.find((x) => x.roleName === String(o.agent).replace(/^@/, ''));
+    const st = o.status === 'running' ? '<span class="tag warn">进行中</span>'
+      : o.status === 'error' ? '<span class="tag err">失败</span>'
+      : '<span class="tag ok">已完成</span>';
+    return '<div class="op' + (o.status === 'running' || o.status === 'error' ? ' open' : '') + '" data-op="' + i + '">' +
+      '<div class="oh"><span class="oi">↗</span><span class="ttl">派发 → ' + esc(o.agent) +
+      (sub && sub.name !== String(o.agent).replace(/^@/, '') ? ' · ' + esc(sub.name) : '') + '</span>' + st + '<span class="chev">⌄</span></div>' +
+      '<div class="ob"><div class="kv">任务</div><div class="prose">' + mdRender(o.task) + '</div>' +
+      '<div class="kv mt">回执</div><div class="prose">' + (o.result ? mdRender(o.result) : '<span class="spin"></span>') + '</div></div></div>';
+  }
+  const label = ({ create: '创建', append: '追加', update: '更新', read: '读取', list: '列举', delete: '删除' })[o.op] || o.op;
+  return '<div class="op" data-op="' + i + '">' +
+    '<div class="oh"><span class="oi">▤</span><span class="ttl">文档 · ' + esc(label) + (o.title ? '「' + esc(o.title) + '」' : '') + '</span>' +
+    '<span class="tag ok">已执行</span><span class="chev">⌄</span></div>' +
+    '<div class="ob"><div class="prose">' + mdRender(o.result || '') + '</div></div></div>';
+}
+
+/* ------------------------- 统计气泡 ------------------------- */
+function statsBubbleHTML(topic) {
+  const st = topic.stats || blankStats();
+  const ags = Object.keys(st.agents || {}).map((k) => st.agents[k]);
+  const open = !!S.ui.statsOpen;
+  const chips = ags.length
+    ? ags.map((a) =>
+        '<span class="bub-chip">' + avatarHTML({ avatar: a.avatar }, 'xs') +
+        '<b>' + esc(a.name) + '</b><i>' + a.calls + ' 次 · ' + fmtNum(a.tokens) + '</i></span>').join('')
+    : '<span class="kv">本次对话尚未调用 Agent</span>';
+  return '<div class="bubble glass' + (open ? ' open' : '') + '" id="statsBubble">' +
+    '<button class="bub-head" data-act="toggle-stats">' +
+      '<span class="bub-orb"></span>' +
+      '<span class="bub-mini">本次对话 · <b>' + fmtNum(st.totalTokens) + '</b> tokens</span>' +
+      '<span class="bub-chev">⌄</span>' +
+    '</button>' +
+    '<div class="bub-body"><div class="bub-inner">' +
+      '<div class="bub-lbl">参与 Agent <span class="kv">' + ags.length + ' 个</span></div>' +
+      '<div class="bub-agents">' + chips + '</div>' +
+      '<div class="bub-grid">' +
+        '<div class="bub-stat"><b>' + fmtNum(st.totalTokens) + '</b><span>总 tokens' + (st.estimated ? ' · 含估算' : '') + '</span></div>' +
+        '<div class="bub-stat"><b>' + st.requests + '</b><span>请求次数</span></div>' +
+        '<div class="bub-stat"><b>' + fmtNum(st.promptTokens) + '</b><span>输入 tokens</span></div>' +
+        '<div class="bub-stat"><b>' + fmtNum(st.completionTokens) + '</b><span>输出 tokens</span></div>' +
+      '</div>' +
+      '<div class="bub-foot"><span>累计耗时 ' + ((st.ms || 0) / 1000).toFixed(1) + 's</span><span>' + (st.lastAt ? relTime(st.lastAt) : '—') + '</span></div>' +
+    '</div></div></div>';
+}
+function refreshBubble() {
+  const old = $('#statsBubble');
+  if (!old) return;
+  const topic = ensureTopic(curAgent().id);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = statsBubbleHTML(topic);
+  old.replaceWith(tmp.firstElementChild);
+}
+
+/* ------------------------- 对话视图 ------------------------- */
+function renderChat() {
+  const a = curAgent();
+  const topic = ensureTopic(a.id);
+  const msgs = topic.messages;
+  const inner = msgs.length ? msgs.map((m) => msgHTML(m, a)).join('') : welcomeHTML(a);
+  $('#body').innerHTML =
+    '<div class="scroll" id="msgs"><div class="msgs">' + inner + '</div></div>' +
+    '<div class="composer"><div class="composer-in">' +
+      statsBubbleHTML(topic) +
+      '<div class="cbox glass">' +
+        '<textarea id="input" rows="1" placeholder="给 ' + esc(a.name) + ' 发消息…  （用 @ 可提及团队 Agent）"></textarea>' +
+        '<div class="crow">' +
+          '<button class="icon-btn" data-act="evac" title="召集全员协作">⚡</button>' +
+          '<button class="icon-btn" data-act="mention" title="提及 Agent">@</button>' +
+          '<button class="send" data-act="send" title="发送">➤</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="hint">' +
+        '<span>Enter 发送 · Shift+Enter 换行</span>' +
+        '<button class="hint-toggle" data-act="toggle-syntax">指令语法 <i>⌃</i></button>' +
+        '<span class="hint-syn">' +
+          (a.tools.delegate ? '<span>派发 <code>&lt;call agent="@角色名"&gt;…&lt;/call&gt;</code></span>' : '') +
+          (a.tools.docs ? '<span>文档 <code>&lt;doc op="create" title="…"&gt;…&lt;/doc&gt;</code></span>' : '') +
+        '</span>' +
+        '<span style="margin-left:auto">' + (S.settings.sandbox.enabled ? '云沙盒已连接' : '云沙盒未配置') + '</span>' +
+      '</div>' +
+    '</div></div>';
+  bindChat();
+  const sc = $('#msgs'); if (sc) sc.scrollTop = sc.scrollHeight;
+}
+
+function welcomeHTML(a) {
+  return '<div class="welcome"><h1>' + esc(a.name) + ' 待命中</h1>' +
+    '<p>' + esc(a.desc || (isMain(a) ? '整个团队由我调度。给我一个目标，我来拆解、派发、汇总，并沉淀成文档。' : '直接说需求，我来处理。')) + '</p>' +
+    '<div class="cards">' +
+      '<div class="wcard glass" data-fill="帮我做一个本周工作计划，拆成 3 个子任务派给团队，并把结果写成一份文档。"><b>让主控调度团队</b><span>体验「拆解 → 派发 → 汇总 → 沉淀文档」全流程</span></div>' +
+      '<div class="wcard glass" data-fill="列出当前所有文档。"><b>查看文档库</b><span>Agent 之间靠文档交接</span></div>' +
+      '<div class="wcard glass" data-fill="介绍一下你的团队成员和各自擅长的领域。"><b>团队成员</b><span>看看有哪些角色可被调度</span></div>' +
+      '<div class="wcard glass" data-act="goto-settings"><b>配置 API / 模型</b><span>填写地址、拉取可用模型、选默认模型</span></div>' +
+    '</div></div>';
+}
+
+function bindChat() {
+  const ta = $('#input');
+  if (!ta) return;
+  ta.value = S.ui.drafting || '';
+  autoGrow(ta);
+  ta.addEventListener('input', () => { S.ui.drafting = ta.value; autoGrow(ta); hideMention(); });
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doSend(); }
+  });
+}
+function autoGrow(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 180) + 'px'; }
+
+function showMention() {
+  hideMention();
+  const box = $('.cbox'); if (!box) return;
+  const pop = document.createElement('div');
+  pop.className = 'mention-pop glass'; pop.id = 'mentionPop';
+  pop.innerHTML = S.agents.map((a) =>
+    '<div class="mi" data-mention="@' + esc(a.roleName) + '">' + avatarHTML(a, 'sm') +
+    '<div><div class="mi-n">' + esc(a.name) + '</div><div class="kv">@' + esc(a.roleName) + '</div></div></div>').join('');
+  box.parentElement.appendChild(pop);
+  pop.addEventListener('click', (e) => {
+    const mi = e.target.closest('.mi'); if (!mi) return;
+    const ta = $('#input');
+    ta.value = (ta.value ? ta.value.replace(/\s*$/, ' ') : '') + mi.dataset.mention + ' ';
+    S.ui.drafting = ta.value; ta.focus(); hideMention();
+  });
+}
+function hideMention() { const p = $('#mentionPop'); if (p) p.remove(); }
+
+/* ------------------------- 对话主流程 ------------------------- */
+async function doSend() {
+  if (RUNNING) { stopRun(); return; }
+  const ta = $('#input'); if (!ta) return;
+  const text = ta.value.trim(); if (!text) return;
+  ta.value = ''; S.ui.drafting = '';
+  hideMention();
+  await runTurn(text);
+}
+function stopRun() { if (ABORT) { try { ABORT.abort(); } catch (e) {} } RUNNING = false; toast('已停止'); }
+
+function appendTurn(html) {
+  const wrap = $('#msgs .msgs');
+  if (!wrap) return null;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const el = tmp.firstElementChild;
+  wrap.appendChild(el);
+  scrollDown();
+  return el;
+}
+function scrollDown() { const sc = $('#msgs'); if (sc) sc.scrollTop = sc.scrollHeight; }
+function setSendState(running) {
+  const b = $('.send'); if (!b) return;
+  b.classList.toggle('stop', running);
+  b.textContent = running ? '■' : '➤';
+}
+
+async function runTurn(userText) {
+  const agent = curAgent();
+  const topic = ensureTopic(agent.id);
+  if (topic.messages.length === 0) topic.title = userText.slice(0, 18);
+  topic.messages.push({ role: 'user', content: userText, ts: now(), by: agent.id });
+  save();
+  renderChat();
+
+  RUNNING = true; ABORT = new AbortController();
+  setSendState(true);
+  const maxRounds = S.settings.maxRounds || 6;
+  try {
+    for (let round = 1; round <= maxRounds; round++) {
+      // 先取上下文（此时不含本轮的空占位），再落一条助手消息占位
+      const msgs = apiMessages(agent, topic);
+      const msg = { role: 'assistant', content: '', ops: [], ts: now(), round, by: agent.id };
+      topic.messages.push(msg);
+      const el = appendTurn(msgHTML(agent, msg));
+      if (!el) break;
+      const bodyEl = el.querySelector('.prose');
+
+      let usage = null;
+      const t0 = now();
+      let full = '', last = 0;
+      full = await streamChat(agent, msgs, (c) => {
+        full += c;
+        const t = now();
+        if (t - last > 60) { last = t; bodyEl.innerHTML = mdRender(stripDirectives(full)) + '<span class="caret">▍</span>'; scrollDown(); }
+      }, ABORT.signal, (u) => { usage = u; });
+      const dt = now() - t0;
+
+      msg.raw = full;
+      msg.content = stripDirectives(full);
+      msg.ms = dt;
+      bodyEl.innerHTML = mdRender(msg.content || '（无正文输出）');
+      bumpStats(topic, agent, usage, msgs, full, dt);
+      refreshBubble();
+      save();
+
+      const ops = extractDirectives(full);
+      if (!ops.length) break;
+
+      msg.ops = ops;
+      const opsEl = document.createElement('div');
+      opsEl.className = 'ops';
+      el.querySelector('.bd').appendChild(opsEl);
+      const results = [];
+
+      for (let i = 0; i < ops.length; i++) {
+        const o = ops[i];
+        if (o.type === 'doc') {
+          const r = execDocOp(o);
+          o.result = r; o.status = 'done';
+          opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
+          results.push('【文档操作结果】' + o.op + ' 「' + o.title + '」→ ' + r);
+          save();
+        } else {
+          const key = String(o.agent).replace(/^@/, '');
+          const target = S.agents.find((x) => x.roleName === key) || S.agents.find((x) => x.name === key);
+          if (!target) {
+            o.status = 'error'; o.result = '未找到该 Agent（请检查 @角色名）。';
+            opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
+            results.push('【派发失败】' + o.agent + ' 不存在。');
+            continue;
+          }
+          o.status = 'running';
+          opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
+          scrollDown();
+          const pre = opsEl.querySelectorAll('.op')[i] ? opsEl.querySelectorAll('.op')[i].querySelectorAll('.prose')[1] : null;
+          try {
+            const subMsgs = [{ role: 'system', content: buildSystem(target) }, { role: 'user', content: o.task }];
+            let acc = '', subUsage = null, last2 = 0;
+            const t1 = now();
+            const r = await streamChat(target, subMsgs, (c) => {
+              acc += c;
+              const t = now();
+              if (t - last2 > 60) { last2 = t; if (pre) { pre.innerHTML = mdRender(stripDirectives(acc)) + '<span class="caret">▍</span>'; scrollDown(); } }
+            }, ABORT.signal, (u) => { subUsage = u; });
+            const dt1 = now() - t1;
+            o.result = stripDirectives(r); o.status = 'done';
+            bumpStats(topic, target, subUsage, subMsgs, r, dt1);
+            refreshBubble();
+            results.push('【' + target.name + ' @' + target.roleName + ' 的回执】\n' + o.result);
+          } catch (e) {
+            o.status = 'error'; o.result = '调用失败：' + (e.message || e);
+            results.push('【' + target.name + ' 调用失败】' + (e.message || e));
+          }
+          opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
+          scrollDown();
+        }
+      }
+      save();
+      if (!results.length) break;
+      if (round === maxRounds) {
+        topic.messages.push({ role: 'user', content: '（系统）已达最大轮次，请直接给出最终答复。', _synthetic: true });
+        break;
+      }
+      topic.messages.push({ role: 'user', content: '（系统回执，请据此继续；若已可收尾请直接输出最终答复）\n\n' + results.join('\n\n'), _synthetic: true });
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') {
+      topic.messages.push({ role: 'assistant', content: '_已中止。_', ops: [], by: agent.id });
+    } else {
+      topic.messages.push({
+        role: 'assistant', ops: [], by: agent.id,
+        content: '⚠️ **调用失败**：' + (e.message || e) +
+          '\n\n> 排查：API 地址是否正确、Key 是否有效、是否已拉取并选择模型。浏览器直连第三方接口若被 CORS 拦截，可换用支持浏览器直连的服务商，或自建一个本地代理。',
+      });
+      toast('调用失败：' + (e.message || e), 'err');
+    }
+  } finally {
+    RUNNING = false; ABORT = null; save();
+    renderChat();
+  }
+}
+
+/* ------------------------- 文档库 ------------------------- */
+function renderDocs() {
+  if (!S.docs.length) S.docs.push({ id: uid('d'), title: '未命名文档', content: '', ownerId: 'main', shared: true, updatedAt: now() });
+  if (!S.ui.activeDocId || !findDoc(S.ui.activeDocId)) S.ui.activeDocId = S.docs[0].id;
+  const d = findDoc(S.ui.activeDocId);
+  const list = S.docs.map((x) => {
+    const o = getAgent(x.ownerId);
+    return '<div class="di' + (x.id === d.id ? ' on' : '') + '" data-doc="' + x.id + '">' +
+      '<div class="t">' + esc(x.title) + '</div>' +
+      '<div class="m">' + (o ? esc(o.name) : '共享') + ' · ' + relTime(x.updatedAt) + '</div></div>';
+  }).join('');
+  $('#body').innerHTML =
+  '<div class="docs">' +
+    '<div class="docs-list glass">' +
+      '<button class="btn pri full" data-act="newdoc">＋ 新建文档</button>' + list +
+    '</div>' +
+    '<div class="doc-edit">' +
+      '<div class="doc-bar glass">' +
+        '<input id="docTitle" value="' + esc(d.title) + '" placeholder="文档标题">' +
+        '<span class="kv" id="docMeta">' + d.content.length + ' 字 · ' + relTime(d.updatedAt) + '</span>' +
+        '<button class="btn sm" data-act="saveDoc">保存</button>' +
+        '<button class="btn sm danger" data-act="delDoc">删除</button>' +
+      '</div>' +
+      '<div class="doc-area"><textarea id="docBody" placeholder="写点什么…（支持 Markdown）">' + esc(d.content) + '</textarea></div>' +
+    '</div>' +
+  '</div>';
+  const ta = $('#docBody');
+  if (ta) {
+    ta.addEventListener('input', () => { const m = $('#docMeta'); if (m) m.textContent = ta.value.length + ' 字 · 未保存'; });
+    ta.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); saveDoc(); } });
+  }
+}
+function saveDoc() {
+  const d = findDoc(S.ui.activeDocId); if (!d) return;
+  const t = $('#docTitle'), b = $('#docBody');
+  if (t) d.title = t.value.trim() || '未命名文档';
+  if (b) d.content = b.value;
+  d.updatedAt = now(); save();
+  toast('已保存「' + d.title + '」', 'ok');
+  renderDocs();
+}
+
+/* ------------------------- Agent 设置 ------------------------- */
+function renderAgentEdit() {
+  const a = getAgent(S.ui.editAgentId) || curAgent();
+  const tab = S.ui.editTab || 'base';
+  const tb = (k, t) => '<button class="' + (tab === k ? 'on' : '') + '" data-tab="' + k + '">' + t + '</button>';
+  $('#body').innerHTML =
+  '<div class="scroll"><div class="page">' +
+    '<h2>Agent 设置 · ' + esc(a.name) + '</h2>' +
+    '<div class="sub">角色名用于主模型识别与派发指令 —— <code>@' + esc(a.roleName) + '</code></div>' +
+    '<div class="tabs">' + tb('base', '① 基础信息') + tb('skills', '② Skills') + tb('ability', '③ 模型与能力') + '</div>' +
+    '<div id="tabBody"></div>' +
+    '<div class="row mt">' +
+      '<button class="btn pri fix" data-act="saveAgent">保存设置</button>' +
+      '<button class="btn fix" data-act="goto-chat">返回对话</button>' +
+      (a.isMain ? '' : '<button class="btn danger fix" data-act="delAgent">删除该 Agent</button>') +
+    '</div>' +
+  '</div></div>';
+  renderTab(a, tab);
+}
+
+function renderTab(a, tab) {
+  const el = $('#tabBody');
+  if (tab === 'base') {
+    const isImg = /^(data:|https?:)/.test(a.avatar || '');
+    el.innerHTML =
+    '<div class="card glass"><h3>头像</h3>' +
+      '<div class="row" style="align-items:center">' + avatarHTML(a, 'lg') +
+        '<div class="fix"><button class="btn sm" data-act="uploadAvatar">上传图片</button></div>' +
+        '<div class="fix"><button class="btn sm" data-act="clearAvatar">用 Emoji</button></div>' +
+        '<input type="file" id="avFile" accept="image/*" hidden>' +
+      '</div>' +
+      '<div class="fld mt"><label>或填写图片 URL</label><input id="fAvatarUrl" placeholder="https://…（留空则用下方 Emoji）" value="' + (isImg ? esc(a.avatar) : '') + '"></div>' +
+      '<div class="emoji-grid" id="emojiGrid">' + EMOJIS.map((e) =>
+        '<button data-emoji="' + e + '" class="' + (!isImg && a.avatar === e ? 'on' : '') + '">' + e + '</button>').join('') + '</div>' +
+    '</div>' +
+    '<div class="card glass"><h3>身份</h3>' +
+      '<div class="row">' +
+        '<div class="fld"><label>名字</label><input id="fName" value="' + esc(a.name) + '" placeholder="例如：调研员"></div>' +
+        '<div class="fld"><label>角色名（主模型识别用）</label><input id="fRole" value="' + esc(a.roleName) + '" placeholder="例如：researcher"></div>' +
+      '</div>' +
+      '<div class="fld"><label>一句话简介</label><input id="fDesc" value="' + esc(a.desc || '') + '" placeholder="擅长做什么，供主控判断该派什么活"></div>' +
+    '</div>' +
+    '<div class="card glass"><h3>系统提示词</h3>' +
+      '<div class="fld"><textarea id="fPrompt" rows="10" placeholder="定义这个 Agent 的身份、能力、输出规范">' + esc(a.systemPrompt || '') + '</textarea>' +
+      '<div class="hint2">' + (a.isMain ? '主控提示词里已内置派发 / 文档指令协议，改动前建议先看看默认版本。' : '建议写清楚：专长、输出格式、边界。') + '</div></div>' +
+      (a.isMain ? '<button class="btn sm" data-act="resetMainPrompt">恢复默认总控提示词</button>' : '') +
+    '</div>';
+  } else if (tab === 'skills') {
+    const sk = a.skills || [];
+    el.innerHTML =
+    '<div class="card glass"><h3>从 GitHub 拉取 Skill</h3>' +
+      '<div class="fld"><label>仓库 / 文件地址</label>' +
+        '<input id="fSkillUrl" placeholder="https://github.com/owner/repo 或直接粘贴 SKILL.md 的 raw 链接">' +
+        '<div class="hint2">支持：GitHub 仓库根目录（自动找 SKILL.md）、<code>github.com/o/r/tree/branch/path</code>、任意 <code>raw.githubusercontent.com</code> 链接、lobehub skill 页面链接。</div>' +
+      '</div>' +
+      '<button class="btn pri" data-act="pullSkill">拉取并装载</button>' +
+    '</div>' +
+    '<div class="card glass"><h3>已装载 Skills <span class="tag">' + sk.length + '</span></h3>' +
+      (sk.length ? sk.map((s, i) =>
+        '<div class="op"><div class="oh" data-skill="' + i + '"><span class="oi">◆</span><span class="ttl">' + esc(s.name) + '</span>' +
+        '<span class="tag">' + (s.content || '').length + ' 字</span><button class="btn sm danger fix" data-delskill="' + i + '">移除</button><span class="chev">⌄</span></div>' +
+        '<div class="ob"><div class="kv">' + esc(s.source || '') + '</div><div class="prose">' + mdRender((s.content || '').slice(0, 1600)) + '</div></div></div>').join('')
+        : '<div class="empty">还没有装载 Skill。Skill 内容会被注入该 Agent 的系统提示词。</div>') +
+    '</div>';
+  } else {
+    const opts = S.settings.providers.map((p) => '<option value="' + p.id + '"' + (a.providerId === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('');
+    const p = providerFor(a);
+    const models = (p && p.models) || [];
+    el.innerHTML =
+    '<div class="card glass"><h3>模型</h3>' +
+      '<div class="row">' +
+        '<div class="fld"><label>API 配置</label><select id="fProv"><option value="">（跟随全局）</option>' + opts + '</select></div>' +
+        '<div class="fld"><label>模型</label><select id="fModel"><option value="">（跟随全局：' + esc(S.settings.defaultModel || '未设置') + '）</option>' +
+          models.map((m) => '<option value="' + esc(m) + '"' + (a.model === m ? ' selected' : '') + '>' + esc(m) + '</option>').join('') + '</select>' +
+          '<div class="hint2">' + (models.length ? '' : '该 API 配置下还没有模型，先去「设置 → API」拉取。') + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="card glass"><h3>能力开关</h3>' +
+      sw('任务派发（多 Agent 协作）', '允许该 Agent 用 &lt;call&gt; 指令调度其他 Agent', a.tools.delegate, 'delegate') +
+      sw('文档读写', '允许用 &lt;doc&gt; 指令创建 / 读取 / 修改文档（交接用）', a.tools.docs, 'docs') +
+      sw('云沙盒', S.settings.sandbox.enabled ? '已配置：' + esc(S.settings.sandbox.endpoint) : '未配置 —— 需使用者自行添加（设置 → 云沙盒）', a.tools.sandbox, 'sandbox') +
+      sw('联网检索', '预留开关（需自行接入搜索 API）', a.tools.search, 'search') +
+    '</div>';
+  }
+}
+function sw(label, desc, on, key) {
+  return '<div class="switch"><div><div class="lbl">' + label + '</div><div class="dsc">' + desc + '</div></div>' +
+    '<div class="tgl' + (on ? ' on' : '') + '" data-tool="' + key + '"></div></div>';
+}
+
+/* ------------------------- 设置 ------------------------- */
+function renderSettings() {
+  const ps = S.settings.providers;
+  const ap = getProvider(S.settings.activeProviderId) || ps[0];
+  const sb = S.settings.sandbox;
+  $('#body').innerHTML =
+  '<div class="scroll"><div class="page">' +
+    '<h2>设置</h2>' +
+    '<div class="sub">API 地址、可用模型、云沙盒 —— 数据仅保存在本机浏览器（localStorage），不会上传。</div>' +
+
+    '<div class="card glass"><h3>① API 配置</h3>' +
+      '<div class="fld"><label>选择要编辑的配置</label><div class="row">' +
+        '<select id="cfgPick">' + ps.map((p) => '<option value="' + p.id + '"' + (p.id === ap.id ? ' selected' : '') + '>' + esc(p.name) + ' — ' + esc(p.baseUrl || '未填地址') + '</option>').join('') + '</select>' +
+        '<button class="btn fix" data-act="addProvider">＋ 新增</button></div></div>' +
+      '<div class="fld"><label>预设（选中自动填地址，可再改）</label><select id="cfgPreset">' +
+        PRESETS.map((p) => '<option value="' + p.id + '"' + (p.baseUrl === ap.baseUrl ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select></div>' +
+      '<div class="fld"><label>名称</label><input id="cfgName" value="' + esc(ap.name) + '"></div>' +
+      '<div class="fld"><label>API Base URL（需兼容 OpenAI 协议：/chat/completions、/models）</label><input id="cfgUrl" value="' + esc(ap.baseUrl) + '" placeholder="https://api.example.com/v1"></div>' +
+      '<div class="fld"><label>API Key</label><input id="cfgKey" type="password" value="' + esc(ap.apiKey) + '" placeholder="sk-…"></div>' +
+      '<div class="row">' +
+        '<button class="btn pri fix" data-act="pullModels">拉取可用模型</button>' +
+        '<button class="btn fix" data-act="testApi">测试连通</button>' +
+        '<button class="btn danger fix" data-act="delProvider">删除该配置</button>' +
+      '</div>' +
+      '<div class="fld mt"><label>已获取模型 <span class="kv">' + (ap.models || []).length + ' 个</span></label>' +
+        '<div class="chips">' + ((ap.models || []).length
+          ? ap.models.map((m) => '<span class="chip"><a href="#" data-setdefault="' + esc(m) + '">设为默认</a> · ' + esc(m) + '</span>').join('')
+          : '<span class="kv">还没有模型，点上方「拉取可用模型」</span>') + '</div></div>' +
+      '<div class="fld"><label>全局默认模型</label><select id="cfgDefault"><option value="">（未设置）</option>' +
+        (ap.models || []).map((m) => '<option value="' + esc(m) + '"' + (S.settings.defaultModel === m ? ' selected' : '') + '>' + esc(m) + '</option>').join('') +
+        (S.settings.defaultModel && !(ap.models || []).includes(S.settings.defaultModel) ? '<option value="' + esc(S.settings.defaultModel) + '" selected>' + esc(S.settings.defaultModel) + '</option>' : '') +
+        '</select></div>' +
+      '<div class="fld"><label>协作最大轮次（主控派发-回执循环上限）</label><input id="cfgRounds" type="number" min="1" max="12" value="' + (S.settings.maxRounds || 6) + '"></div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>② 云沙盒 <span class="tag warn">需自行添加</span></h3>' +
+      '<div class="fld"><label>服务商</label><select id="sbProvider">' +
+        ['e2b', 'daytona', 'modal', '自建 / 其它'].map((x) => '<option' + (sb.provider === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
+      '<div class="fld"><label>沙盒 API Endpoint</label><input id="sbEndpoint" value="' + esc(sb.endpoint) + '" placeholder="https://api.e2b.dev"></div>' +
+      '<div class="fld"><label>沙盒 API Key</label><input id="sbKey" type="password" value="' + esc(sb.apiKey) + '" placeholder="填入你自己的沙盒密钥"></div>' +
+      '<div class="switch"><div><div class="lbl">启用云沙盒</div><div class="dsc">仅在你填好 Endpoint / Key 后打开</div></div>' +
+        '<div class="tgl' + (sb.enabled ? ' on' : '') + '" data-tool="sandbox"></div></div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>③ 数据</h3>' +
+      '<div class="sub" style="margin:0 0 12px">Agent ' + S.agents.length + ' 个 · 文档 ' + S.docs.length + ' 篇 · 会话 ' + S.topics.length + ' 个</div>' +
+      '<div class="row">' +
+        '<button class="btn fix" data-act="exportData">导出全部数据 (JSON)</button>' +
+        '<button class="btn fix" data-act="importData">导入数据</button>' +
+        '<button class="btn danger fix" data-act="resetAll">清空并恢复初始状态</button>' +
+      '</div>' +
+      '<input type="file" id="impFile" accept="application/json" hidden>' +
+    '</div>' +
+  '</div></div>';
+
+  const pick = $('#cfgPick');
+  if (pick) pick.addEventListener('change', () => { persistCfg(); S.settings.activeProviderId = pick.value; save(); renderSettings(); });
+  const pre = $('#cfgPreset');
+  if (pre) pre.addEventListener('change', () => {
+    const p = PRESETS.find((x) => x.id === pre.value);
+    if (p && p.baseUrl) { const u = $('#cfgUrl'), n = $('#cfgName'); if (u) u.value = p.baseUrl; if (n && p.id !== 'custom') n.value = p.name; }
+  });
+  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey'].forEach((sel) => {
+    const e = $(sel); if (e) e.addEventListener('change', () => { persistCfg(); save(); });
+  });
+}
+
+function persistCfg() {
+  const p = getProvider(S.settings.activeProviderId);
+  if (p) {
+    const g = (id) => { const e = $(id); return e ? e.value : undefined; };
+    if (g('#cfgName') !== undefined) p.name = g('#cfgName').trim() || '未命名配置';
+    if (g('#cfgUrl') !== undefined) p.baseUrl = g('#cfgUrl').trim();
+    if (g('#cfgKey') !== undefined) p.apiKey = g('#cfgKey').trim();
+  }
+  if ($('#cfgDefault')) S.settings.defaultModel = $('#cfgDefault').value;
+  if ($('#cfgRounds')) S.settings.maxRounds = Math.max(1, Math.min(12, parseInt($('#cfgRounds').value, 10) || 6));
+  const sb = S.settings.sandbox;
+  if ($('#sbProvider')) sb.provider = $('#sbProvider').value;
+  if ($('#sbEndpoint')) sb.endpoint = $('#sbEndpoint').value.trim();
+  if ($('#sbKey')) sb.apiKey = $('#sbKey').value.trim();
+}
+
+function persistAgentTab(a, tab) {
+  const g = (id) => { const e = $(id); return e ? e.value : null; };
+  if (tab === 'base') {
+    if (g('#fName') !== null) a.name = g('#fName').trim() || a.name;
+    if (g('#fRole') !== null) {
+      const r = g('#fRole').trim().replace(/^@/, '').replace(/[^\w\u4e00-\u9fa5-]/g, '');
+      a.roleName = r || a.roleName;
+    }
+    if (g('#fDesc') !== null) a.desc = g('#fDesc').trim();
+    if (g('#fPrompt') !== null) a.systemPrompt = g('#fPrompt');
+    const u = g('#fAvatarUrl');
+    if (u !== null && u.trim()) a.avatar = u.trim();
+  } else if (tab === 'ability') {
+    if (g('#fProv') !== null) a.providerId = g('#fProv');
+    if (g('#fModel') !== null) a.model = g('#fModel');
+  }
+}
+
+/* ------------------------- 全局事件 ------------------------- */
+function wireGlobal() {
+  document.addEventListener('click', async (e) => {
+    const t = e.target;
+
+    /* 提及 / 复制 */
+    const copy = t.closest('.copybtn');
+    if (copy) {
+      const pre = copy.closest('pre');
+      const code = pre && pre.querySelector('code');
+      if (code) { try { await navigator.clipboard.writeText(code.textContent); } catch (x) {} }
+      copy.textContent = '已复制'; setTimeout(() => { copy.textContent = '复制'; }, 1200);
+      return;
+    }
+    const delSk = t.closest('[data-delskill]');
+    if (delSk) {
+      e.stopPropagation();
+      const a = getAgent(S.ui.editAgentId) || curAgent();
+      a.skills.splice(+delSk.dataset.delskill, 1); save(); renderTab(a, 'skills'); return;
+    }
+    const oh = t.closest('.oh');
+    if (oh && !t.closest('[data-act]')) { oh.parentElement.classList.toggle('open'); return; }
+
+    const fill = t.closest('[data-fill]');
+    if (fill) { S.ui.drafting = fill.dataset.fill; const ta = $('#input'); if (ta) { ta.value = S.ui.drafting; ta.focus(); autoGrow(ta); } return; }
+
+    const docEl = t.closest('[data-doc]');
+    if (docEl) { saveDocIfDirty(); S.ui.activeDocId = docEl.dataset.doc; renderDocs(); return; }
+
+    const agEl = t.closest('[data-agent]');
+    if (agEl) {
+      S.ui.activeAgentId = agEl.dataset.agent;
+      S.ui.activeTopicId = null; S.ui.drafting = ''; S.ui.view = 'chat';
+      hideMention(); save(); renderShell(); return;
+    }
+
+    const tabBtn = t.closest('[data-tab]');
+    if (tabBtn) {
+      const a = getAgent(S.ui.editAgentId) || curAgent();
+      persistAgentTab(a, S.ui.editTab || 'base'); save();
+      S.ui.editTab = tabBtn.dataset.tab; renderAgentEdit(); return;
+    }
+
+    const tgl = t.closest('[data-tool]');
+    if (tgl) {
+      const k = tgl.dataset.tool;
+      if (k === 'sandbox' && S.ui.view === 'settings') { S.settings.sandbox.enabled = !S.settings.sandbox.enabled; save(); tgl.classList.toggle('on'); toast(S.settings.sandbox.enabled ? '云沙盒已启用' : '云沙盒已关闭'); return; }
+      const a = getAgent(S.ui.editAgentId) || curAgent();
+      persistAgentTab(a, 'ability');
+      a.tools[k] = !a.tools[k]; save(); renderTab(a, 'ability'); return;
+    }
+
+    const em = t.closest('[data-emoji]');
+    if (em) {
+      if (em.closest('.mask')) return;              // 弹窗内的选择由弹窗自己处理
+      const a = getAgent(S.ui.editAgentId) || curAgent();
+      a.avatar = em.dataset.emoji; save(); renderTab(a, 'base'); renderShell(); return;
+    }
+
+
+    const mi = t.closest('[data-mention]');
+    if (mi) return;
+
+    const setDef = t.closest('[data-setdefault]');
+    if (setDef) { e.preventDefault(); S.settings.defaultModel = setDef.dataset.setdefault; save(); renderSettings(); toast('默认模型：' + setDef.dataset.setdefault, 'ok'); return; }
+
+    const act = t.closest('[data-act]');
+    if (!act) return;
+    await handleAct(act.dataset.act, e);
+  });
+
+  document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'agentSearch') {
+      S.ui._q = e.target.value; renderAgentLists();
+    }
+  });
+
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.id === 'avFile' && t.files && t.files[0]) {
+      const f = t.files[0];
+      if (f.size > 1200000) { toast('图片太大（>1.2MB），建议先用 URL', 'err'); return; }
+      const fr = new FileReader();
+      fr.onload = () => { const a = getAgent(S.ui.editAgentId) || curAgent(); a.avatar = fr.result; save(); renderTab(a, 'base'); renderShell(); };
+      fr.readAsDataURL(f);
+    }
+    if (t.id === 'impFile' && t.files && t.files[0]) {
+      const fr = new FileReader();
+      fr.onload = () => {
+        try {
+          const o = JSON.parse(fr.result);
+          localStorage.setItem(KEY, JSON.stringify(o));
+          S = load(); save(); renderShell();
+          toast('导入成功', 'ok');
+        } catch (x) { toast('导入失败：文件不是合法 JSON', 'err'); }
+      };
+      fr.readAsText(t.files[0]);
+    }
+  });
+}
+
+function saveDocIfDirty() {
+  if (S.ui.view !== 'docs') return;
+  const d = findDoc(S.ui.activeDocId); if (!d) return;
+  const t = $('#docTitle'), b = $('#docBody');
+  if (t) d.title = t.value.trim() || d.title;
+  if (b) d.content = b.value;
+  d.updatedAt = now(); save();
+}
+
+async function handleAct(act, e) {
+  const a0 = curAgent();
+  switch (act) {
+    case 'toggle-side': {
+      S.ui.collapsed = !S.ui.collapsed;
+      document.getElementById('app').classList.toggle('collapsed', S.ui.collapsed);
+      save(); return;
+    }
+    case 'goto-chat': {
+      if (S.ui.view === 'agent') { const a = getAgent(S.ui.editAgentId) || curAgent(); persistAgentTab(a, S.ui.editTab || 'base'); save(); }
+      if (S.ui.view === 'docs') saveDocIfDirty();
+      S.ui.view = 'chat'; save(); renderShell(); return;
+    }
+    case 'goto-docs': { saveDocIfDirty(); S.ui.view = 'docs'; save(); renderShell(); return; }
+    case 'goto-settings': { if (S.ui.view === 'docs') saveDocIfDirty(); S.ui.view = 'settings'; save(); renderShell(); return; }
+    case 'newtopic': { newTopic(a0.id); S.ui.drafting = ''; save(); renderShell(); return; }
+    case 'editagent': { S.ui.editAgentId = a0.id; S.ui.editTab = 'base'; S.ui.view = 'agent'; save(); renderShell(); return; }
+    case 'toggle-stats': { S.ui.statsOpen = !S.ui.statsOpen; save(); refreshBubble(); return; }
+    case 'toggle-syntax': {
+      const h = document.querySelector('.hint'); if (h) h.classList.toggle('show-syn');
+      return;
+    }
+    case 'mention': { showMention(); return; }
+    case 'evac': {
+      const ta = $('#input');
+      const roles = S.agents.filter((x) => x.id !== a0.id).map((x) => '@' + x.roleName).join(' ');
+      if (ta) { ta.value = '请召集全员协作：' + (roles || '（暂无其他 Agent）') + ' 让他们各自从专业角度给出建议，最后汇总成一份文档。'; ta.focus(); autoGrow(ta); S.ui.drafting = ta.value; }
+      return;
+    }
+    case 'send': { doSend(); return; }
+    case 'addagent': { openNewAgentDialog(); return; }
+    case 'newdoc': {
+      const d = { id: uid('d'), title: '未命名文档', content: '', ownerId: S.ui.activeAgentId, shared: true, updatedAt: now() };
+      S.docs.unshift(d); S.ui.activeDocId = d.id; save(); renderDocs();
+      const t = $('#docTitle'); if (t) { t.focus(); t.select(); }
+      return;
+    }
+    case 'saveDoc': { saveDoc(); return; }
+    case 'delDoc': {
+      const d = findDoc(S.ui.activeDocId); if (!d) return;
+      modal('<h3>删除文档</h3><div class="dsc">确定删除「' + esc(d.title) + '」？不可恢复。</div>' +
+        '<div class="act"><button class="btn" data-x="cancel">取消</button><button class="btn danger" data-x="ok">删除</button></div>',
+        (m, close) => {
+          m.addEventListener('click', (ev) => {
+            const x = ev.target.closest('[data-x]'); if (!x) return;
+            if (x.dataset.x === 'ok') { S.docs = S.docs.filter((y) => y.id !== d.id); S.ui.activeDocId = null; save(); renderDocs(); toast('已删除', 'ok'); }
+            close();
+          });
+        });
+      return;
+    }
+    case 'saveAgent': {
+      const a = getAgent(S.ui.editAgentId) || curAgent();
+      persistAgentTab(a, S.ui.editTab || 'base');
+      if (!a.isMain) {
+        const dup = S.agents.some((x) => x.id !== a.id && x.roleName === a.roleName);
+        if (dup) { toast('角色名「' + a.roleName + '」已被占用，请换一个', 'err'); return; }
+      }
+      save(); renderShell(); toast('已保存「' + a.name + '」', 'ok'); return;
+    }
+    case 'delAgent': {
+      const a = getAgent(S.ui.editAgentId); if (!a || a.isMain) return;
+      modal('<h3>删除 Agent</h3><div class="dsc">确定删除「' + esc(a.name) + '」？其专属文档会保留为共享文档。</div>' +
+        '<div class="act"><button class="btn" data-x="cancel">取消</button><button class="btn danger" data-x="ok">删除</button></div>',
+        (m, close) => {
+          m.addEventListener('click', (ev) => {
+            const x = ev.target.closest('[data-x]'); if (!x) return;
+            if (x.dataset.x === 'ok') {
+              S.agents = S.agents.filter((y) => y.id !== a.id);
+              S.topics = S.topics.filter((tp) => tp.agentId !== a.id);
+              S.ui.activeAgentId = mainAgent().id; S.ui.activeTopicId = null; S.ui.view = 'chat';
+              save(); renderShell(); toast('已删除', 'ok');
+            }
+            close();
+          });
+        });
+      return;
+    }
+    case 'resetMainPrompt': {
+      const a = getAgent(S.ui.editAgentId) || curAgent();
+      a.systemPrompt = MAIN_PROMPT; save(); renderTab(a, 'base'); toast('已恢复默认', 'ok'); return;
+    }
+    case 'uploadAvatar': { const f = $('#avFile'); if (f) f.click(); return; }
+    case 'clearAvatar': { const a = getAgent(S.ui.editAgentId) || curAgent(); a.avatar = '🤖'; save(); renderTab(a, 'base'); renderShell(); return; }
+    case 'pullSkill': {
+      const a = getAgent(S.ui.editAgentId) || curAgent();
+      const input = $('#fSkillUrl');
+      const raw = input ? input.value.trim() : '';
+      if (!raw) { toast('请先填写地址', 'err'); return; }
+      const url = normalizeSkillUrl(raw);
+      const btn = e.target.closest('[data-act]');
+      if (btn) { btn.disabled = true; btn.textContent = '拉取中…'; }
+      try {
+        const text = await fetchSkill(url);
+        const s = parseSkill(text, url);
+        a.skills = a.skills || [];
+        const old = a.skills.findIndex((x) => x.name === s.name);
+        if (old >= 0) a.skills[old] = s; else a.skills.push(s);
+        save(); renderTab(a, 'skills'); toast('已装载 Skill：' + s.name, 'ok');
+      } catch (err) {
+        toast('拉取失败：' + (err.message || err), 'err');
+        if (btn) { btn.disabled = false; btn.textContent = '拉取并装载'; }
+      }
+      return;
+    }
+    case 'addProvider': {
+      const id = uid('pr');
+      S.settings.providers.push({ id, name: '新配置', baseUrl: '', apiKey: '', models: [] });
+      S.settings.activeProviderId = id; save(); renderSettings(); return;
+    }
+    case 'delProvider': {
+      if (S.settings.providers.length <= 1) { toast('至少保留一个配置', 'err'); return; }
+      const id = S.settings.activeProviderId;
+      S.settings.providers = S.settings.providers.filter((p) => p.id !== id);
+      S.settings.activeProviderId = S.settings.providers[0].id;
+      save(); renderSettings(); return;
+    }
+    case 'pullModels': {
+      persistCfg();
+      const p = getProvider(S.settings.activeProviderId);
+      const btn = e.target.closest('[data-act]');
+      if (btn) { btn.disabled = true; btn.textContent = '拉取中…'; }
+      try {
+        const ids = await pullModels(p);
+        ids.sort();
+        p.models = ids;
+        if (!S.settings.defaultModel || !ids.includes(S.settings.defaultModel)) S.settings.defaultModel = ids[0];
+        save(); renderSettings(); toast('获取到 ' + ids.length + ' 个模型', 'ok');
+      } catch (err) {
+        toast('拉取失败：' + (err.message || err), 'err');
+        if (btn) { btn.disabled = false; btn.textContent = '拉取可用模型'; }
+      }
+      return;
+    }
+    case 'testApi': {
+      persistCfg();
+      const p = getProvider(S.settings.activeProviderId);
+      const btn = e.target.closest('[data-act]');
+      if (btn) { btn.disabled = true; btn.textContent = '测试中…'; }
+      try {
+        const ids = await pullModels(p);
+        toast('连通正常，可用模型 ' + ids.length + ' 个', 'ok');
+      } catch (err) {
+        toast('连通失败：' + (err.message || err), 'err');
+      }
+      if (btn) { btn.disabled = false; btn.textContent = '测试连通'; }
+      return;
+    }
+    case 'exportData': {
+      const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'agenthub-backup-' + Date.now() + '.json';
+      a.click(); URL.revokeObjectURL(url); toast('已导出', 'ok'); return;
+    }
+    case 'importData': { const f = $('#impFile'); if (f) f.click(); return; }
+    case 'resetAll': {
+      modal('<h3>清空全部数据</h3><div class="dsc">将删除所有 Agent、文档与会话，恢复到初始状态。确定继续？</div>' +
+        '<div class="act"><button class="btn" data-x="cancel">取消</button><button class="btn danger" data-x="ok">确认清空</button></div>',
+        (m, close) => {
+          m.addEventListener('click', (ev) => {
+            const x = ev.target.closest('[data-x]'); if (!x) return;
+            if (x.dataset.x === 'ok') { localStorage.removeItem(KEY); S = defaultState(); save(); renderShell(); toast('已重置', 'ok'); }
+            close();
+          });
+        });
+      return;
+    }
+  }
+}
+
+/* ------------------------- 新建 Agent ------------------------- */
+function openNewAgentDialog() {
+  modal(
+    '<h3>新建 Agent</h3><div class="dsc">创建后可随时修改名字、角色名、头像与 Skills。</div>' +
+    '<div class="fld"><label>名字</label><input id="nName" placeholder="例如：调研员" value=""></div>' +
+    '<div class="fld"><label>角色名（主模型派发时用 @角色名 识别）</label><input id="nRole" placeholder="例如：researcher" value=""></div>' +
+    '<div class="fld"><label>一句话简介（可选）</label><input id="nDesc" placeholder="擅长什么"></div>' +
+    '<div class="fld"><label>头像 Emoji</label><div class="emoji-grid" id="nEmoji">' +
+      EMOJIS.slice(0, 20).map((x, i) => '<button data-emoji="' + x + '" class="' + (i === 1 ? 'on' : '') + '">' + x + '</button>').join('') + '</div></div>' +
+    '<div class="act"><button class="btn" data-x="cancel">取消</button><button class="btn pri" data-x="ok">创建并进入设置</button></div>',
+    (m, close) => {
+      let avatar = EMOJIS[1];
+      m.addEventListener('click', (ev) => {
+        const em = ev.target.closest('[data-emoji]');
+        if (em) {
+          avatar = em.dataset.emoji;
+          $$('[data-emoji]', m).forEach((b) => b.classList.remove('on')); em.classList.add('on'); return;
+        }
+        const x = ev.target.closest('[data-x]'); if (!x) return;
+        if (x.dataset.x === 'ok') {
+          const name = ($('#nName', m).value || '').trim();
+          let role = ($('#nRole', m).value || '').trim().replace(/^@/, '').replace(/[^\w\u4e00-\u9fa5-]/g, '');
+          if (!name) { toast('请填写名字', 'err'); return; }
+          if (!role) role = 'agent' + (S.agents.length + 1);
+          if (S.agents.some((y) => y.roleName === role)) { toast('角色名已被占用', 'err'); return; }
+          const na = {
+            id: uid('ag'), isMain: false, name, roleName: role, avatar,
+            desc: ($('#nDesc', m).value || '').trim(),
+            systemPrompt: '你是团队中的「' + name + '」。\n\n请专注你的职责，直接给出高质量、可用的结论；输出尽量结构化。\n\n如需沉淀成果，可以使用文档指令：<doc op="create" title="标题">内容</doc>。',
+            providerId: '', model: '', skills: [],
+            tools: { delegate: false, docs: true, sandbox: false, search: false },
+          };
+          S.agents.push(na);
+          S.ui.editAgentId = na.id; S.ui.editTab = 'base'; S.ui.view = 'agent';
+          save(); renderShell(); toast('已创建「' + name + '」', 'ok');
+        }
+        close();
+      });
+    }
+  );
+}
+
+/* ------------------------- 启动 ------------------------- */
+function boot() {
+  S = load();
+  if (!S.topics.length) ensureTopic(S.ui.activeAgentId);
+  renderShell();
+  wireGlobal();
+  window.addEventListener('resize', () => { const ta = $('#input'); if (ta) autoGrow(ta); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { hideMention(); const m = $('.mask'); }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+      if (S.ui.view !== 'chat' && S.ui.view !== 'docs' && S.ui.view !== 'settings') return;
+      e.preventDefault(); S.ui.collapsed = !S.ui.collapsed;
+      document.getElementById('app').classList.toggle('collapsed', S.ui.collapsed); save();
+    }
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
