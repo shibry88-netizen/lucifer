@@ -56,7 +56,8 @@ jobs:
           mkdir -p out
           cp src-tauri/target/release/bundle/nsis/*-setup.exe out/ 2>/dev/null || true
           cp src-tauri/target/release/bundle/msi/*.msi        out/ 2>/dev/null || true
-          cp src-tauri/target/release/LUCIFER.exe             out/ 2>/dev/null || true
+          ls -la src-tauri/target/release/*.exe 2>/dev/null || echo '(target 根目录无裸 exe)'
+          cp src-tauri/target/release/*.exe                  out/ 2>/dev/null || true
           echo "--- 产物 ---"
           ls -la out
 
