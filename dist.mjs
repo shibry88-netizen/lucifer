@@ -2,8 +2,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('.', import.meta.url).pathname;
+const root = fileURLToPath(new URL('.', import.meta.url));
 execSync('node build.mjs', { cwd: root, stdio: 'inherit' });
 
 const dist = path.join(root, 'dist');

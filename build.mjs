@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('.', import.meta.url).pathname;
+const root = fileURLToPath(new URL('.', import.meta.url));
 const src = path.join(root, 'src');
 
 const css = fs.readFileSync(path.join(src, 'style.css'), 'utf8');

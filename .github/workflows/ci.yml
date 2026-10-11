@@ -105,7 +105,7 @@ jobs:
           # electron 二进制下载又慢又容易在 runner 上失败
           mkdir -p .ci-e2e
           cd .ci-e2e
-          [ -f package.json ] || npm init -y
+          [ -f package.json ] || echo '{"name":"lucifer-ci-e2e","version":"0.0.0","private":true}' > package.json
           npm install "playwright@${{ env.PW_VERSION }}"
           npx playwright install --with-deps chromium
 
