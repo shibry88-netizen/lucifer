@@ -90,19 +90,37 @@ PY
 echo "→ zipalign"
 zipalign -f 4 "$BUILD/app-unsigned.apk" "$BUILD/app-aligned.apk"
 
-if [ ! -f "$HERE/debug.keystore" ]; then
-  echo "→ 生成 debug 证书"
-  keytool -genkeypair -keystore "$HERE/debug.keystore" \
-    -storepass android -keypass android -alias androiddebugkey \
-    -keyalg RSA -keysize 2048 -validity 10000 \
-    -dname "CN=Android Debug,O=Android,C=US"
+# 正式签名优先：读 android/keystore.properties（不入库）；否则退回 debug 证书
+KS_FILE=""; KS_PASS=""; KS_ALIAS=""; KEY_PASS=""; MODE="debug"
+if [ -f "$HERE/keystore.properties" ]; then
+  . "$HERE/keystore.properties"
+  KS_FILE="$HERE/$storeFile"; KS_PASS="$storePassword"; KS_ALIAS="$keyAlias"; KEY_PASS="$keyPassword"
+  MODE="release"
+elif [ -f "$HERE/release.keystore" ] && [ -n "${LUCIFER_KS_PASS:-}" ]; then
+  KS_FILE="$HERE/release.keystore"; KS_PASS="$LUCIFER_KS_PASS"
+  KS_ALIAS="lucifer"; KEY_PASS="$LUCIFER_KS_PASS"
+  MODE="release"
 fi
 
-echo "→ apksigner"
-apksigner sign --ks "$HERE/debug.keystore" --ks-pass pass:android --key-pass pass:android \
-  --ks-key-alias androiddebugkey --min-sdk-version 21 \
-  --out "$BUILD/LUCIFER.apk" "$BUILD/app-aligned.apk"
+if [ "$MODE" = "debug" ]; then
+  echo "→ 未找到正式签名配置，退回 debug 证书"
+  if [ ! -f "$HERE/debug.keystore" ]; then
+    keytool -genkeypair -keystore "$HERE/debug.keystore" \
+      -storepass android -keypass android -alias androiddebugkey \
+      -keyalg RSA -keysize 2048 -validity 10000 \
+      -dname "CN=Android Debug,O=Android,C=US"
+  fi
+  KS_FILE="$HERE/debug.keystore"; KS_PASS="android"; KS_ALIAS="androiddebugkey"; KEY_PASS="android"
+fi
 
-apksigner verify --verbose "$BUILD/LUCIFER.apk" | head -6
+OUT="$BUILD/LUCIFER.apk"
+if [ "$MODE" = "release" ]; then OUT="$BUILD/LUCIFER-release.apk"; fi
+
+echo "→ apksigner ($MODE)"
+apksigner sign --ks "$KS_FILE" --ks-pass "pass:$KS_PASS" --key-pass "pass:$KEY_PASS" \
+  --ks-key-alias "$KS_ALIAS" --min-sdk-version 21 \
+  --out "$OUT" "$BUILD/app-aligned.apk"
+
+apksigner verify --verbose "$OUT" | head -7
 echo
-echo "✅ 产物：$BUILD/LUCIFER.apk  ($(du -h "$BUILD/LUCIFER.apk" | cut -f1))"
+echo "✅ 产物：$OUT  ($(du -h "$OUT" | cut -f1))  签名模式：$MODE"

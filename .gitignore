@@ -19,3 +19,9 @@ android/assets/
 android/.toolchain/
 android/debug.keystore
 *.idsig
+
+# 正式签名密钥：绝不入库（丢失后无法更新已安装的 App）
+keystore.properties
+release.keystore
+*.keystore
+*.jks
