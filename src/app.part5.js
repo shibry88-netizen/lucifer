@@ -94,6 +94,40 @@ function toggleAgentMenu() {
   showPop('agent', anchor, agentMenuHTML(), { cls: 'agent-pop', align: 'right' });
 }
 
+/* ------------------------- 会话中心（右上角） ------------------------- */
+function convMenuHTML() {
+  const cur = curAgent();
+  const groups = S.agents.map((a) => {
+    const ts = S.topics.filter((t) => t.agentId === a.id)
+      .sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0));
+    const items = ts.length
+      ? ts.map((t) =>
+          '<button class="conv-item' + ((t.id === S.ui.activeTopicId && a.id === S.ui.activeAgentId) ? ' on' : '') +
+          '" data-act="open-topic" data-topic="' + t.id + '">' +
+            '<span class="ico">' + (a.avatar && /^(data:|https?:)/.test(a.avatar) ? '▣' : (a.avatar || '◆')) + '</span>' +
+            '<span class="col"><span class="nm">' + esc(t.title || '新会话') + '</span>' +
+            '<span class="rl">' + ((t.messages || []).length) + ' 条 · ' + fmtNum((t.stats || {}).totalTokens || 0) + ' tk · ' + relTime(t.createdAt) + '</span></span>' +
+          '</button>').join('')
+      : '<div class="kv" style="padding:6px 12px 10px">还没有会话</div>';
+    return '<div class="nav-group-title">' + esc(a.name) + (a.isMain ? ' ✦' : '') +
+      '<span class="kv">@' + esc(a.roleName) + '</span></div>' + items;
+  }).join('');
+  return '<button class="conv-item new" data-act="newtopic">' +
+      '<span class="ico">＋</span><span class="col"><span class="nm">新对话</span>' +
+      '<span class="rl">在「' + esc(cur.name) + '」下开新会话</span></span></button>' +
+    '<div class="nav-divider"></div>' +
+    groups +
+    '<div class="nav-divider"></div>' +
+    '<button class="conv-item" data-act="goto-search">' +
+      '<span class="ico">⌕</span><span class="col"><span class="nm">全文检索全部会话</span>' +
+      '<span class="rl">跨 Agent 搜索消息与文档</span></span></button>';
+}
+function toggleConvMenu() {
+  const anchor = document.querySelector('.conv-btn');
+  if (!anchor) return;
+  showPop('conv', anchor, convMenuHTML(), { cls: 'conv-pop', align: 'right' });
+}
+
 /* ------------------------- 模型选择器 ------------------------- */
 function modelPillHTML() {
   const a = curAgent();

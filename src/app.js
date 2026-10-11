@@ -578,6 +578,7 @@ function renderShell() {
   const p = providerFor(a);
   const v = S.ui.view;
   const right = (v === 'chat' ? '' : '<button class="btn sm keep" data-act="goto-chat">← 返回对话</button>') +
+    '<button class="btn sm keep conv-btn" data-act="conv-menu" aria-expanded="false" title="会话列表">会话<span class="cnt">' + S.topics.filter((t) => t.agentId === a.id).length + '</span></button>' +
     '<button class="agent-menu-btn" data-act="agent-menu" aria-expanded="false" title="' + esc(a.name) + '">' +
       avatarHTML(a, 'sm') + '<span class="nm">' + esc(a.name) + '</span><span class="chev">⌄</span>' +
     '</button>';
@@ -591,7 +592,6 @@ function renderShell() {
     '<div class="side-search"><input id="agentSearch" placeholder="搜索会话 / Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
     '<div class="side-scroll">' +
       '<div class="side-label">Agents <button data-act="addagent" title="新建 Agent">＋</button></div><div id="agentList"></div>' +
-      '<div class="side-label">会话 <button data-act="newtopic" title="新会话">＋</button></div><div id="topicList"></div>' +
     '</div>' +
     '<div class="side-foot">' +
       '<button data-act="goto-search"><span class="ico">⌕</span><span>历史检索</span></button>' +
@@ -620,7 +620,6 @@ function renderShell() {
   if (S.ui.collapsed) app.classList.add('collapsed');
   if (S.ui.sideOpen) app.classList.add('side-open');
   renderAgentLists();
-  renderTopicList();
   renderTabbar();
   renderView();
 }
@@ -1435,11 +1434,23 @@ async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
     case 'nav-menu': { toggleNavMenu(); return; }
+    case 'conv-menu': { toggleConvMenu(); return; }
+    case 'open-topic': {
+      const el = e.target.closest('[data-topic]');
+      if (!el) return;
+      const t = S.topics.find((x) => x.id === el.dataset.topic);
+      if (!t) return;
+      closePops();
+      S.ui.activeTopicId = t.id; S.ui.activeAgentId = t.agentId;
+      S.ui.drafting = ''; S.ui.view = 'chat';
+      save(); renderShell(); return;
+    }
     case 'agent-menu': { toggleAgentMenu(); return; }
     case 'model-menu': { toggleModelMenu(); return; }
     case 'goto-providers': { closePops(); S.ui.view = 'providers'; S.ui._provOpen = S.ui._provOpen || null; save(); renderShell(); return; }
     case 'switch-agent': {
       const id = e.target.closest('[data-id]').dataset.id;
+      closePops();
       closePops();
       S.ui.activeAgentId = id; S.ui.activeTopicId = null; S.ui.drafting = ''; S.ui.view = 'chat';
       save(); renderShell(); return;
@@ -1568,7 +1579,7 @@ async function handleAct(act, e) {
     }
     case 'goto-docs': { saveDocIfDirty(); S.ui.view = 'docs'; save(); renderShell(); return; }
     case 'goto-settings': { if (S.ui.view === 'docs') saveDocIfDirty(); S.ui.view = 'settings'; save(); renderShell(); return; }
-    case 'newtopic': { newTopic(a0.id); S.ui.drafting = ''; save(); renderShell(); return; }
+    case 'newtopic': { closePops(); newTopic(a0.id); S.ui.drafting = ''; S.ui.view = 'chat'; save(); renderShell(); return; }
     case 'editagent': { S.ui.editAgentId = a0.id; S.ui.editTab = 'base'; S.ui.view = 'agent'; save(); renderShell(); return; }
     case 'toggle-stats': { S.ui.statsOpen = !S.ui.statsOpen; save(); refreshBubble(); return; }
     case 'toggle-syntax': {
@@ -2770,6 +2781,40 @@ function toggleAgentMenu() {
   const anchor = document.querySelector('.agent-menu-btn');
   if (!anchor) return;
   showPop('agent', anchor, agentMenuHTML(), { cls: 'agent-pop', align: 'right' });
+}
+
+/* ------------------------- 会话中心（右上角） ------------------------- */
+function convMenuHTML() {
+  const cur = curAgent();
+  const groups = S.agents.map((a) => {
+    const ts = S.topics.filter((t) => t.agentId === a.id)
+      .sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0));
+    const items = ts.length
+      ? ts.map((t) =>
+          '<button class="conv-item' + ((t.id === S.ui.activeTopicId && a.id === S.ui.activeAgentId) ? ' on' : '') +
+          '" data-act="open-topic" data-topic="' + t.id + '">' +
+            '<span class="ico">' + (a.avatar && /^(data:|https?:)/.test(a.avatar) ? '▣' : (a.avatar || '◆')) + '</span>' +
+            '<span class="col"><span class="nm">' + esc(t.title || '新会话') + '</span>' +
+            '<span class="rl">' + ((t.messages || []).length) + ' 条 · ' + fmtNum((t.stats || {}).totalTokens || 0) + ' tk · ' + relTime(t.createdAt) + '</span></span>' +
+          '</button>').join('')
+      : '<div class="kv" style="padding:6px 12px 10px">还没有会话</div>';
+    return '<div class="nav-group-title">' + esc(a.name) + (a.isMain ? ' ✦' : '') +
+      '<span class="kv">@' + esc(a.roleName) + '</span></div>' + items;
+  }).join('');
+  return '<button class="conv-item new" data-act="newtopic">' +
+      '<span class="ico">＋</span><span class="col"><span class="nm">新对话</span>' +
+      '<span class="rl">在「' + esc(cur.name) + '」下开新会话</span></span></button>' +
+    '<div class="nav-divider"></div>' +
+    groups +
+    '<div class="nav-divider"></div>' +
+    '<button class="conv-item" data-act="goto-search">' +
+      '<span class="ico">⌕</span><span class="col"><span class="nm">全文检索全部会话</span>' +
+      '<span class="rl">跨 Agent 搜索消息与文档</span></span></button>';
+}
+function toggleConvMenu() {
+  const anchor = document.querySelector('.conv-btn');
+  if (!anchor) return;
+  showPop('conv', anchor, convMenuHTML(), { cls: 'conv-pop', align: 'right' });
 }
 
 /* ------------------------- 模型选择器 ------------------------- */
