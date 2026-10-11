@@ -16,6 +16,8 @@ function renderShell() {
   const m = modelFor(a);
   const p = providerFor(a);
   const v = S.ui.view;
+  const viewChanged = S.ui._lastView !== v;
+  S.ui._lastView = v;
   const right = (v === 'chat' ? '' : '<button class="btn sm keep" data-act="goto-chat">← 返回对话</button>') +
     '<button class="btn sm keep conv-btn" data-act="conv-menu" aria-expanded="false" title="会话列表">会话<span class="cnt">' + S.topics.filter((t) => t.agentId === a.id).length + '</span></button>' +
     '<button class="tools-btn" data-act="tools-menu" aria-expanded="false" title="工具 · 检索 / 文档 / GitHub / 设置"><span>⋯</span></button>' +
@@ -41,7 +43,7 @@ function renderShell() {
     '</div>' +
   '</aside>' +
   '<div class="side-mask" data-act="close-side"></div>' +
-  '<main class="main">' +
+  '<main class="main' + (viewChanged ? ' view-enter' : '') + '">' +
     '<header class="top">' +
       '<button class="icon-btn burger" data-act="nav-menu" aria-expanded="false" title="菜单"><i></i><i></i><i></i></button>' +
       avatarHTML(a, 'lg' + (isMain(a) ? ' main-ring' : '')) +

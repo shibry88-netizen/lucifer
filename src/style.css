@@ -57,6 +57,7 @@
   --brand-100:#F7EAC8; --brand-200:#EDD59C; --brand-300:#E0BC78; --brand-400:#D4AF6A;
   --brand-500:#C29A52; --brand-600:#A87F3C; --brand-700:#7E5C2A;
   --accent:#D4AF6A; --accent-2:#E8CE9B; --accent-soft:rgba(212,175,106,.14);
+  --on-accent:#241A08;
   --brand-grad:linear-gradient(135deg,#EDD59C 0%,#D4AF6A 52%,#A87F3C 100%);
   --brand-grad-matte:linear-gradient(140deg,#D4AF6A,#A87F3C);
   --user-grad:linear-gradient(140deg,rgba(212,175,106,.20),rgba(232,206,155,.08));
@@ -91,6 +92,7 @@
   --brand-100:#B98A3C; --brand-200:#A87F3C; --brand-300:#98712F; --brand-400:#8A6527;
   --brand-500:#7E5C2A; --brand-600:#6B4C20; --brand-700:#573C17;
   --accent:#A87F3C; --accent-2:#8A6527; --accent-soft:rgba(168,127,60,.12);
+  --on-accent:#FFFFFF;
   --brand-grad:linear-gradient(135deg,#C9A45C 0%,#A87F3C 55%,#8A6527 100%);
   --brand-grad-matte:linear-gradient(140deg,#C9A45C,#8A6527);
   --user-grad:linear-gradient(140deg,rgba(168,127,60,.14),rgba(201,164,92,.08));
@@ -288,11 +290,11 @@ html[data-glass="0"] .top{backdrop-filter:none;background:var(--bg-1)}
   background:var(--bg-3);border:1px solid var(--line-default);
   transition:background var(--dur-base) var(--ease-out),border-color var(--dur-base) var(--ease-out),
              transform var(--dur-base) var(--ease-out),filter var(--dur-base) var(--ease-out),box-shadow var(--dur-base)}
-.btn:hover{background:var(--bg-2);border-color:var(--line-strong);transform:translateY(-1px)}
-.btn:active{transform:translateY(0)}
-.btn.pri{color:#fff;background:var(--brand-grad-matte);border-color:transparent;
+.btn:hover{background:var(--bg-2);border-color:var(--line-strong)}
+.btn:active{transform:scale(.985)}
+.btn.pri{color:var(--on-accent);background:var(--brand-grad-matte);border-color:transparent;
   box-shadow:var(--shadow-brand),inset 0 1px 0 rgba(255,255,255,.28)}
-.btn.pri:hover{filter:brightness(1.08);background:var(--brand-grad-matte)}
+.btn.pri:hover{filter:brightness(1.04);background:var(--brand-grad-matte)}
 .btn.danger{color:var(--danger);background:var(--danger-bg);border-color:transparent}
 .btn.danger:hover{background:var(--danger-bg);border-color:var(--danger);filter:brightness(1.05)}
 .btn.ghost{background:transparent;border-color:var(--line-default)}
@@ -347,7 +349,7 @@ html[data-glass="0"] .top{backdrop-filter:none;background:var(--bg-1)}
 
 .msg.user{flex-direction:row-reverse}
 .msg.user .bd{flex:0 1 auto;max-width:78%}
-.msg.user .prose{background:var(--user-grad);border:1px solid rgba(139,147,255,.22);border-radius:var(--r-lg);
+.msg.user .prose{background:var(--user-grad);border:1px solid var(--line-strong);border-radius:var(--r-lg) var(--r-lg) var(--r-xs) var(--r-lg);
   border-bottom-right-radius:var(--r-xs);padding:11px 15px}
 [data-theme="light"] .msg.user .prose{border-color:rgba(99,83,232,.18)}
 
@@ -972,3 +974,36 @@ html[data-glass="0"] .tools-btn{background:var(--bg-1)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:1ms !important;transition-duration:1ms !important}
 }
+
+
+/* =======================================================================
+ * 组件重绘（v4）：按真实 class 名对齐设计师规范
+ * 真实类名：.btn/.btn.pri/.btn.danger ｜ .msg/.msg.user/.msg .prose
+ *           .bubble.glass（工具卡）｜ .card.glass ｜ .composer ｜ .side-foot
+ * ===================================================================== */
+
+/* 卡片：统一节奏 */
+.card{border-radius:var(--r-md);padding:var(--sp-5)}
+.card>h3{margin:0 0 var(--sp-4)}
+.card .row{margin-bottom:var(--sp-3)}
+
+/* 侧栏底部入口 */
+.side-foot button{border-radius:var(--r-sm);
+  transition:background var(--dur-quick) var(--ease-out),color var(--dur-quick) var(--ease-out)}
+.side-foot button:hover{background:var(--tint-hover);color:var(--text-1)}
+
+/* 工具卡（op card） */
+.bubble.glass{border-radius:var(--r-md)}
+.bubble.glass:hover{border-color:var(--line-strong)}
+
+/* 消息行：层次与节奏 */
+.msg{margin-bottom:var(--sp-5)}
+.msg.user .prose{padding:10px 14px}
+.msg .hd b{letter-spacing:.2px}
+
+/* 输入区：聚焦时鎏金描边（用 :focus-within 由内向外） */
+.composer-in textarea,.composer-in input{border-radius:var(--r-sm)}
+.composer-in textarea:focus,.composer-in input:focus{outline:none}
+
+/* 视图切换：只有真正换视图时才入场（由 renderShell 打标记） */
+.main.view-enter{animation:viewIn 280ms var(--ease-out) both}
