@@ -595,6 +595,7 @@ function renderShell() {
   const v = S.ui.view;
   const right = (v === 'chat' ? '' : '<button class="btn sm keep" data-act="goto-chat">← 返回对话</button>') +
     '<button class="btn sm keep conv-btn" data-act="conv-menu" aria-expanded="false" title="会话列表">会话<span class="cnt">' + S.topics.filter((t) => t.agentId === a.id).length + '</span></button>' +
+    '<button class="tools-btn" data-act="tools-menu" aria-expanded="false" title="工具 · 检索 / 文档 / GitHub / 设置"><span>⋯</span></button>' +
     '<button class="agent-menu-btn" data-act="agent-menu" aria-expanded="false" title="' + esc(a.name) + '">' +
       avatarHTML(a, 'sm') + '<span class="nm">' + esc(a.name) + '</span><span class="chev">⌄</span>' +
     '</button>';
@@ -1451,6 +1452,16 @@ async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
     case 'nav-menu': { toggleNavMenu(); return; }
+    case 'tools-menu': { toggleToolMenu(); return; }
+    case 'grp-toggle': {
+      const hd = e.target.closest('.grp-hd');
+      const grp = hd && hd.closest('.grp');
+      if (grp) {
+        const open = grp.classList.toggle('open');
+        hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      return;
+    }
     case 'conv-menu': { toggleConvMenu(); return; }
     case 'open-topic': {
       const el = e.target.closest('[data-topic]');
@@ -2772,21 +2783,42 @@ function showPop(key, anchor, html, opts) {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && POP_OPEN) { e.stopPropagation(); closePops(); } });
 
 /* ------------------------- ☰ 二级菜单 ------------------------- */
+/* ☰ 收敛：检索 / 文档 / GitHub / 设置 已移入右上角「工具」二级菜单 */
 function navMenuHTML() {
+  return '<button class="nav-item" data-act="addagent"><span class="ico">＋</span>新建 Agent</button>' +
+    '<div class="nav-divider"></div>' +
+    '<button class="nav-item" data-act="export-zip"><span class="ico">⤓</span>导出当前会话 ZIP</button>' +
+    '<button class="nav-item" data-act="toggle-rail"><span class="ico">⇤</span>' + (S.ui.collapsed ? '展开侧栏' : '收起侧栏') + '<span class="kbd">⌘B</span></button>';
+}
+
+/* 右上角「工具」：四组二级菜单 —— 一级只显示分组名，点开才展开二级项，容器可滚动 */
+function toolMenuHTML() {
   const p = providerFor(curAgent());
-  return '<div class="nav-group-title">服务商与模型</div>' +
-      '<button class="nav-item" data-act="goto-providers"><span class="ico">◈</span>服务商与模型' +
-      '<span class="meta">' + esc(p ? p.name : '未配置') + '</span></button>' +
-    '<div class="nav-divider"></div>' +
-    '<div class="nav-group-title">工作区</div>' +
-      '<button class="nav-item" data-act="goto-docs"><span class="ico">▤</span>文档库</button>' +
-      '<button class="nav-item" data-act="goto-search"><span class="ico">⌕</span>历史检索<span class="kbd">⌘K</span></button>' +
-      '<button class="nav-item" data-act="goto-github"><span class="ico">⑂</span>GitHub</button>' +
-      '<button class="nav-item" data-act="export-zip"><span class="ico">⤓</span>导出当前会话 ZIP</button>' +
-    '<div class="nav-divider"></div>' +
-      '<button class="nav-item" data-act="addagent"><span class="ico">＋</span>新建 Agent</button>' +
-      '<button class="nav-item" data-act="goto-settings"><span class="ico">⚙</span>设置</button>' +
-      '<button class="nav-item" data-act="toggle-rail"><span class="ico">⇤</span>' + (S.ui.collapsed ? '展开侧栏' : '收起侧栏') + '<span class="kbd">⌘B</span></button>';
+  const gh = S.settings.github || {};
+  const it = (act, label, kbd) =>
+    '<button class="menu-item" data-act="' + act + '">' +
+      '<span class="mt">' + label + '</span>' +
+      (kbd ? '<span class="mk">' + kbd + '</span>' : '') +
+    '</button>';
+  const grp = (id, icon, title, meta, items) =>
+    '<section class="grp" data-grp="' + id + '">' +
+      '<button class="grp-hd" data-act="grp-toggle" aria-expanded="false">' +
+        '<span class="gi">' + icon + '</span><span class="gt">' + title + '</span>' +
+        (meta ? '<span class="gn">' + esc(meta) + '</span>' : '') +
+        '<span class="chev">⌄</span>' +
+      '</button>' +
+      '<div class="grp-body"><div><div class="grp-items">' + items + '</div></div></div>' +
+    '</section>';
+  return grp('search', '⌕', '检索', '', it('goto-search', '历史检索', '⌘K') + it('conv-menu', '会话中心')) +
+    grp('docs', '▤', '文档', '', it('goto-docs', '文档库')) +
+    grp('github', '⑂', 'GitHub', gh.user ? '@' + gh.user : '', it('goto-github', '仓库与 CI')) +
+    grp('settings', '⚙', '设置', p ? p.name : '未配置',
+      it('goto-providers', '服务商与模型') + it('goto-settings', '全部设置'));
+}
+function toggleToolMenu() {
+  const anchor = document.querySelector('.tools-btn');
+  if (!anchor) return;
+  showPop('tools', anchor, toolMenuHTML(), { cls: 'tool-pop', align: 'right' });
 }
 function toggleNavMenu() {
   const anchor = document.querySelector('.burger');

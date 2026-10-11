@@ -18,6 +18,7 @@ function renderShell() {
   const v = S.ui.view;
   const right = (v === 'chat' ? '' : '<button class="btn sm keep" data-act="goto-chat">← 返回对话</button>') +
     '<button class="btn sm keep conv-btn" data-act="conv-menu" aria-expanded="false" title="会话列表">会话<span class="cnt">' + S.topics.filter((t) => t.agentId === a.id).length + '</span></button>' +
+    '<button class="tools-btn" data-act="tools-menu" aria-expanded="false" title="工具 · 检索 / 文档 / GitHub / 设置"><span>⋯</span></button>' +
     '<button class="agent-menu-btn" data-act="agent-menu" aria-expanded="false" title="' + esc(a.name) + '">' +
       avatarHTML(a, 'sm') + '<span class="nm">' + esc(a.name) + '</span><span class="chev">⌄</span>' +
     '</button>';
@@ -874,6 +875,16 @@ async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
     case 'nav-menu': { toggleNavMenu(); return; }
+    case 'tools-menu': { toggleToolMenu(); return; }
+    case 'grp-toggle': {
+      const hd = e.target.closest('.grp-hd');
+      const grp = hd && hd.closest('.grp');
+      if (grp) {
+        const open = grp.classList.toggle('open');
+        hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      return;
+    }
     case 'conv-menu': { toggleConvMenu(); return; }
     case 'open-topic': {
       const el = e.target.closest('[data-topic]');
