@@ -1177,14 +1177,29 @@ async function handleAct(act, e) {
       persistCfg();
       const p = getProvider(S.settings.activeProviderId);
       const btn = e.target.closest('[data-act]');
-      if (btn) { btn.disabled = true; btn.textContent = '测试中…'; }
-      try {
-        const ids = await pullModels(p);
-        toast('连通正常，可用模型 ' + ids.length + ' 个', 'ok');
-      } catch (err) {
-        toast('连通失败：' + (err.message || err), 'err');
-      }
+      if (btn) { btn.disabled = true; btn.textContent = '诊断中…'; }
+      let report = '';
+      try { report = await diagnoseProvider(p); }
+      catch (err) { report = '诊断本身出错：' + ((err && err.message) || err); }
       if (btn) { btn.disabled = false; btn.textContent = '测试连通'; }
+      modal('<h3>连接诊断</h3><div class="dsc">把下面这段整段复制发给开发者，就能直接定位问题。</div>' +
+        '<textarea readonly style="width:100%;height:300px;font-family:var(--font-mono);font-size:12px;' +
+        'white-space:pre;overflow:auto;background:var(--code-bg);color:var(--code-text);' +
+        'border:1px solid var(--line-subtle);border-radius:var(--r-sm);padding:10px">' + esc(report) + '</textarea>' +
+        '<div class="act"><button class="btn" data-x="cancel">关闭</button>' +
+        '<button class="btn pri" data-x="copy">复制全部</button></div>',
+        (mm, close) => {
+          mm.addEventListener('click', (ev) => {
+            const x = ev.target.closest('[data-x]'); if (!x) return;
+            if (x.dataset.x === 'copy') {
+              const ta = mm.querySelector('textarea');
+              ta.focus(); ta.select();
+              try { document.execCommand('copy'); toast('已复制', 'ok'); } catch (e2) { toast('复制失败，请手动选中复制', 'err'); }
+              return;
+            }
+            close();
+          });
+        });
       return;
     }
     case 'exportData': {
