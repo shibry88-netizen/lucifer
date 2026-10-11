@@ -576,13 +576,11 @@ function renderSettings() {
     '<div class="card glass"><h3>① API 配置</h3>' +
       '<div class="row" style="margin-bottom:16px">' +
         '<button class="btn pri fix" data-act="goto-providers">打开「服务商与模型」』</button>' +
-        '<span class="kv" style="flex:1">推荐用新面板：选预设自动填地址，支持多个服务商随时切换。下面的卡片仅作兼容保留。</span>' +
+        '<span class="kv" style="flex:1">统一按 OpenAI 兼容协议接入 —— 官方 / 中转站 / 自建 / 本地推理，填 Base URL 即可，支持多套配置随时切换。</span>' +
       '</div>' +
       '<div class="fld"><label>选择要编辑的配置</label><div class="row">' +
         '<select id="cfgPick">' + ps.map((p) => '<option value="' + p.id + '"' + (p.id === ap.id ? ' selected' : '') + '>' + esc(p.name) + ' — ' + esc(p.baseUrl || '未填地址') + '</option>').join('') + '</select>' +
         '<button class="btn fix" data-act="addProvider">＋ 新增</button></div></div>' +
-      '<div class="fld"><label>预设（选中自动填地址，可再改）</label><select id="cfgPreset">' +
-        PRESETS.map((p) => '<option value="' + p.id + '"' + (p.baseUrl === ap.baseUrl ? ' selected' : '') + '>' + esc(p.name) + (p.hint ? ' —— ' + esc(p.hint) : '') + '</option>').join('') + '</select></div>' +
       '<div class="fld"><label>名称</label><input id="cfgName" value="' + esc(ap.name) + '"></div>' +
       '<div class="fld"><label>API Base URL（需兼容 OpenAI 协议：/chat/completions、/models）</label><input id="cfgUrl" value="' + esc(ap.baseUrl) + '" placeholder="https://api.example.com/v1"></div>' +
       '<div class="fld"><label>API Key</label><input id="cfgKey" type="password" value="' + esc(ap.apiKey) + '" placeholder="sk-…"></div>' +
@@ -602,16 +600,25 @@ function renderSettings() {
       '<div class="fld"><label>协作最大轮次（主控派发-回执循环上限）</label><input id="cfgRounds" type="number" min="1" max="12" value="' + (S.settings.maxRounds || 6) + '"></div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>② 云沙盒 <span class="tag warn">需自行添加</span></h3>' +
-      '<div class="fld"><label>服务商</label><select id="sbProvider">' +
-        ['e2b', 'daytona', 'modal', '自建 / 其它'].map((x) => '<option' + (sb.provider === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
-      '<div class="fld"><label>沙盒 API Endpoint</label><input id="sbEndpoint" value="' + esc(sb.endpoint) + '" placeholder="https://api.e2b.dev"></div>' +
-      '<div class="fld"><label>沙盒 API Key</label><input id="sbKey" type="password" value="' + esc(sb.apiKey) + '" placeholder="填入你自己的沙盒密钥"></div>' +
-      '<div class="switch"><div><div class="lbl">启用云沙盒</div><div class="dsc">仅在你填好 Endpoint / Key 后打开</div></div>' +
+    '<div class="card glass"><h3>② 云沙盒</h3>' +
+      '<div class="fld"><label>代码在哪里跑</label><select id="sbMode">' +
+        [['builtin', '① 内置服务商（e2b 兼容）'], ['self', '② 我自己的服务器（云 / 本地）']]
+          .map(([k, n]) => '<option value="' + k + '"' + (((sb.mode || 'builtin') === k) ? ' selected' : '') + '>' + n + '</option>').join('') +
+        '</select></div>' +
+      (((sb.mode || 'builtin') === 'self')
+        ? '<div class="fld"><label>我的服务器地址</label><input id="sbEndpoint" value="' + esc(sb.endpoint) + '" placeholder="http://192.168.1.10:8000 或 https://sandbox.example.com"></div>' +
+          '<div class="fld"><label>执行路径</label><input id="sbExecPath" value="' + esc(sb.execPath || '/exec') + '" placeholder="/exec"></div>' +
+          '<div class="fld"><label>密钥（可选）</label><input id="sbKey" type="password" value="' + esc(sb.apiKey) + '" placeholder="没有就留空"></div>' +
+          '<div class="hint2 mt">约定：<code>POST {地址}{执行路径}</code>，body <code>{"code":"…","lang":"python"}</code>，返回 <code>{"stdout":"…","stderr":"…"}</code> 或纯文本。你的服务器需要允许跨域（CORS）。</div>'
+        : '<div class="fld"><label>服务商</label><select id="sbProvider">' +
+            ['e2b', 'daytona', 'modal', '自建 / 其它'].map((x) => '<option' + (sb.provider === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
+          '<div class="fld"><label>沙盒 API Endpoint</label><input id="sbEndpoint" value="' + esc(sb.endpoint) + '" placeholder="https://api.e2b.dev"></div>' +
+          '<div class="fld"><label>沙盒 API Key</label><input id="sbKey" type="password" value="' + esc(sb.apiKey) + '" placeholder="填入你自己的沙盒密钥"></div>' +
+          '<div class="hint2 mt">协议：<code>POST /sandboxes</code> 创建 · <code>POST /sandboxes/{id}/code</code> 执行 · <code>DELETE /sandboxes/{id}</code> 销毁（e2b 兼容）。</div>') +
+      '<div class="switch"><div><div class="lbl">启用云沙盒</div><div class="dsc">仅在你填好地址 / Key 后打开</div></div>' +
         '<div class="tgl' + (sb.enabled ? ' on' : '') + '" data-tool="sandbox"></div></div>' +
       '<div class="row mt"><button class="btn pri fix" data-act="sandbox-test">测试云沙盒</button>' +
         '<span class="kv">' + (sb.lastOk ? '上次连通：' + relTime(sb.lastOk) : '尚未测试连通') + '</span></div>' +
-      '<div class="hint2 mt">协议：<code>POST /sandboxes</code> 创建 · <code>POST /sandboxes/{id}/code</code> 执行 · <code>DELETE /sandboxes/{id}</code> 销毁（e2b 兼容）。浏览器直连沙盒可能被 CORS 拦，桌面端不受影响。</div>' +
     '</div>' +
 
     '<div class="card glass"><h3>③ 主题外观</h3>' +
@@ -666,19 +673,11 @@ function renderSettings() {
     '</div>' +
   '</div></div>';
 
+  const sbm = $('#sbMode');
+  if (sbm) sbm.addEventListener('change', () => { persistCfg(); save(); renderSettings(); });
   const pick = $('#cfgPick');
   if (pick) pick.addEventListener('change', () => { persistCfg(); S.settings.activeProviderId = pick.value; save(); renderSettings(); });
-  const pre = $('#cfgPreset');
-  if (pre) pre.addEventListener('change', () => {
-    const p = PRESETS.find((x) => x.id === pre.value);
-    if (!p) return;
-    const u = $('#cfgUrl'), n = $('#cfgName');
-    if (u && p.baseUrl) u.value = p.baseUrl;
-    if (n && p.id !== 'custom') n.value = p.name;
-    if (!p.baseUrl && p.hint) toast(p.name + '：' + p.hint, '');
-    else if (!p.baseUrl) toast('请在下方填入 ' + p.name + ' 的 API 地址', '');
-  });
-  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
+  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbExecPath', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
     const e = $(sel); if (e) e.addEventListener('change', () => { persistCfg(); save(); });
   });
 }
@@ -700,7 +699,9 @@ function persistCfg() {
   const ghc = S.settings.github || (S.settings.github = {});
   if ($('#ghToken')) ghc.token = $('#ghToken').value.trim();
   const sb = S.settings.sandbox;
+  if ($('#sbMode')) sb.mode = $('#sbMode').value;
   if ($('#sbProvider')) sb.provider = $('#sbProvider').value;
+  if ($('#sbExecPath')) sb.execPath = $('#sbExecPath').value.trim() || '/exec';
   if ($('#sbEndpoint')) sb.endpoint = $('#sbEndpoint').value.trim();
   if ($('#sbKey')) sb.apiKey = $('#sbKey').value.trim();
 }

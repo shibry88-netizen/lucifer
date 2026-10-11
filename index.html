@@ -135,7 +135,7 @@ html[data-custom-accent="1"]{
 }
 
 /* ---------------- 基础 ---------------- */
-html,body{height:100%;margin:0}
+html,body{height:100%;margin:0;overscroll-behavior:none}
 body{
   background:var(--bg-0); color:var(--text-1); font-family:var(--font-cn);
   font-size:var(--fs-ui); line-height:1.65;
@@ -196,7 +196,8 @@ html[data-glass="0"] .glass::before{display:none}
 .gold-text{background:var(--brand-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* ---------------- 布局 ---------------- */
-.app{position:relative;z-index:2;display:flex;height:100vh;overflow:hidden}
+/* 100dvh 跟随移动端动态工具栏，避免 100vh 溢出导致顶部露白/底部被截 */
+.app{position:relative;z-index:2;display:flex;height:100vh;height:100dvh;overflow:hidden}
 .side{
   width:268px;min-width:268px;background:var(--bg-1);border-right:1px solid var(--line-subtle);
   display:flex;flex-direction:column;transition:margin-left 240ms var(--ease-in-out);contain:layout;
@@ -269,7 +270,7 @@ html[data-glass="0"] .top{backdrop-filter:none;background:var(--bg-1)}
 .icon-btn:hover{background:var(--accent-soft);color:var(--text-1);transform:translateY(-1px)}
 .icon-btn:active{transform:translateY(0) scale(.95)}
 .icon-btn.on{background:var(--accent-soft);color:var(--accent)}
-.burger i{display:block;width:15px;height:1.5px;border-radius:2px;background:currentColor;margin:2.5px 0;transition:width var(--dur-base) var(--ease-out)}
+.burger i{display:block;width:15px;height:1.5px;border-radius:2px;background:currentColor;margin:1.5px 0;transition:width var(--dur-base) var(--ease-out)}
 .burger:hover i:nth-child(1),.burger:hover i:nth-child(3){width:10px}
 .top-info{min-width:0;flex:1}
 .top-info .t1{font-size:var(--fs-ui);display:flex;align-items:center;gap:7px}
@@ -838,7 +839,10 @@ html[data-glass="0"] .agent-menu-btn{background:var(--bg-1)}
 .agent-item.is-main .nm{color:var(--brand-200)}
 
 @media (max-width:639px){
-  .nav-menu{display:none}
+  /* 此前这里直接 display:none，移动端点 ☰ 等于没反应。改为底部抽屉。 */
+  .nav-menu{left:8px !important;right:8px !important;width:auto !important;
+    top:auto !important;bottom:calc(8px + env(safe-area-inset-bottom)) !important;
+    max-height:min(72dvh,620px)}
   .composer-meta{gap:8px;margin-bottom:8px}
   .model-pill{height:34px}
   .model-pill .name{max-width:92px}
@@ -977,19 +981,11 @@ function mdRender(src) {
 
 /* ------------------------- 预设 Provider ------------------------- */
 /* 主力：DeepSeek / 智谱 GLM / 小米 MiMo；中转站用于走 GPT 等海外模型 */
+/* 不再维护厂商预设列表：统一按 OpenAI 兼容协议配置。
+ * 任何兼容服务（官方 / 中转站 / 自建 / 本地）只需填 Base URL + Key。 */
 const PRESETS = [
-  { id: 'deepseek', name: 'DeepSeek 深度求索', baseUrl: 'https://api.deepseek.com/v1', hint: '国内直连稳定' },
-  { id: 'zhipu', name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', hint: 'glm-4.6 / glm-4-plus' },
-  { id: 'mimo', name: '小米 MiMo', baseUrl: '', hint: '请填入你的 MiMo 接入地址' },
-  { id: 'relay', name: '中转站 / 自建代理', baseUrl: '', hint: '兼容 OpenAI 协议即可，走 GPT 等海外模型' },
-  { id: 'openai', name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', hint: '浏览器直连可能被 CORS 拦' },
-  { id: 'moonshot', name: 'Moonshot / Kimi', baseUrl: 'https://api.moonshot.cn/v1', hint: '' },
-  { id: 'dashscope', name: '通义千问 DashScope', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', hint: '' },
-  { id: 'siliconflow', name: 'SiliconFlow 硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', hint: '' },
-  { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', hint: '' },
-  { id: 'ollama', name: 'Ollama（本地）', baseUrl: 'http://localhost:11434/v1', hint: '' },
-  { id: 'lmstudio', name: 'LM Studio（本地）', baseUrl: 'http://localhost:1234/v1', hint: '' },
-  { id: 'custom', name: '自定义地址', baseUrl: '', hint: '' },
+  { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1',
+    hint: '任何兼容 OpenAI 协议的服务都可以：官方地址、中转站、自建代理、本地推理，填 Base URL 即可' },
 ];
 
 /* 主题预设（主色相 h / 饱和 s / 明度 l）—— 默认靛紫，与第一版配色一致 */
@@ -1032,10 +1028,10 @@ function defaultState() {
   return {
     v: 3,
     settings: {
-      providers: [{ id: pid, name: 'DeepSeek 深度求索', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', models: ['deepseek-chat', 'deepseek-reasoner'] }],
+      providers: [{ id: pid, name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiKey: '', models: ['gpt-4o', 'gpt-4o-mini'] }],
       activeProviderId: pid,
       defaultModel: 'deepseek-chat',
-      sandbox: { endpoint: '', apiKey: '', enabled: false, provider: 'e2b', lastOk: 0, note: '' },
+      sandbox: { mode: 'builtin', endpoint: '', apiKey: '', execPath: '/exec', enabled: false, provider: 'e2b', lastOk: 0, note: '' },
       search: { provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 },
       github: { token: '', user: '', enabled: false, lastOk: 0, defaultPrivate: true },
       maxRounds: 6,
@@ -1192,11 +1188,35 @@ function modal(html, onMount) {
 }
 
 /* ------------------------- API ------------------------- */
+/* 没写协议时的默认协议判定。
+ * 之前一律补 https://，导致指向 http 的自建中转 / 本地服务必然 fetch 失败。
+ * 规则：本机、局域网、无点主机名（nas、server 等）→ http://，其余 → https:// */
+function pickScheme(u) {
+  const host = String(u).split('/')[0].replace(/^\[[^\]]+\]/, (m) => m).split('@').pop();
+  const name = host.replace(/:\d+$/, '');
+  const isLocal =
+    /^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(name) ||
+    /^10\./.test(name) || /^192\.168\./.test(name) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(name) ||
+    /\.local$/i.test(name) ||
+    !name.includes('.');
+  return isLocal ? 'http://' : 'https://';
+}
 function joinUrl(base, path) {
   if (!base) return '';
   let b = String(base).trim().replace(/\/+$/, '');
-  if (!/^https?:\/\//i.test(b)) b = 'https://' + b;
+  if (!/^[a-z][a-z0-9+.\-]*:\/\//i.test(b)) b = pickScheme(b) + b;
   return b + path;
+}
+/* 把 fetch 失败翻译成人能看懂的原因，并带上真实 URL */
+function fetchHint(url, e) {
+  const u = String(url || '');
+  if (location.protocol === 'https:' && /^http:\/\//i.test(u))
+    return '页面是 https，却请求 http 接口 —— 被浏览器按混合内容拦下。改用 https，或使用桌面端 / 安卓端。';
+  if (/localhost|127\.0\.0\.1|192\.168\.|10\.|\[::1\]|\.local/i.test(u))
+    return '本地/内网地址不可达 —— 确认服务已启动、端口正确；网页版受浏览器限制时请改用桌面端。';
+  if (e && e.name === 'AbortError') return '请求被取消。';
+  return '地址不可达 / DNS 解析失败 / 被网络策略拦截（也可能是该服务不允许浏览器直连）。';
 }
 function apiHeaders(p) {
   const h = { 'Content-Type': 'application/json' };
@@ -1233,7 +1253,7 @@ async function streamChat(agent, messages, onDelta, signal, onUsage) {
   try { r = await doFetch(); }
   catch (e) {
     if (e && e.name === 'AbortError') throw e;
-    throw new Error('网络请求失败：' + (e.message || e) + '（可能是 CORS 或地址不可达）');
+    throw new Error('请求失败 → ' + url + '\n原因：' + (e.message || e) + '\n' + fetchHint(url, e));
   }
   // 少数服务商不认 stream_options，回退重试一次
   if (!r.ok && (r.status === 400 || r.status === 422)) {
@@ -2020,13 +2040,11 @@ function renderSettings() {
     '<div class="card glass"><h3>① API 配置</h3>' +
       '<div class="row" style="margin-bottom:16px">' +
         '<button class="btn pri fix" data-act="goto-providers">打开「服务商与模型」』</button>' +
-        '<span class="kv" style="flex:1">推荐用新面板：选预设自动填地址，支持多个服务商随时切换。下面的卡片仅作兼容保留。</span>' +
+        '<span class="kv" style="flex:1">统一按 OpenAI 兼容协议接入 —— 官方 / 中转站 / 自建 / 本地推理，填 Base URL 即可，支持多套配置随时切换。</span>' +
       '</div>' +
       '<div class="fld"><label>选择要编辑的配置</label><div class="row">' +
         '<select id="cfgPick">' + ps.map((p) => '<option value="' + p.id + '"' + (p.id === ap.id ? ' selected' : '') + '>' + esc(p.name) + ' — ' + esc(p.baseUrl || '未填地址') + '</option>').join('') + '</select>' +
         '<button class="btn fix" data-act="addProvider">＋ 新增</button></div></div>' +
-      '<div class="fld"><label>预设（选中自动填地址，可再改）</label><select id="cfgPreset">' +
-        PRESETS.map((p) => '<option value="' + p.id + '"' + (p.baseUrl === ap.baseUrl ? ' selected' : '') + '>' + esc(p.name) + (p.hint ? ' —— ' + esc(p.hint) : '') + '</option>').join('') + '</select></div>' +
       '<div class="fld"><label>名称</label><input id="cfgName" value="' + esc(ap.name) + '"></div>' +
       '<div class="fld"><label>API Base URL（需兼容 OpenAI 协议：/chat/completions、/models）</label><input id="cfgUrl" value="' + esc(ap.baseUrl) + '" placeholder="https://api.example.com/v1"></div>' +
       '<div class="fld"><label>API Key</label><input id="cfgKey" type="password" value="' + esc(ap.apiKey) + '" placeholder="sk-…"></div>' +
@@ -2046,16 +2064,25 @@ function renderSettings() {
       '<div class="fld"><label>协作最大轮次（主控派发-回执循环上限）</label><input id="cfgRounds" type="number" min="1" max="12" value="' + (S.settings.maxRounds || 6) + '"></div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>② 云沙盒 <span class="tag warn">需自行添加</span></h3>' +
-      '<div class="fld"><label>服务商</label><select id="sbProvider">' +
-        ['e2b', 'daytona', 'modal', '自建 / 其它'].map((x) => '<option' + (sb.provider === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
-      '<div class="fld"><label>沙盒 API Endpoint</label><input id="sbEndpoint" value="' + esc(sb.endpoint) + '" placeholder="https://api.e2b.dev"></div>' +
-      '<div class="fld"><label>沙盒 API Key</label><input id="sbKey" type="password" value="' + esc(sb.apiKey) + '" placeholder="填入你自己的沙盒密钥"></div>' +
-      '<div class="switch"><div><div class="lbl">启用云沙盒</div><div class="dsc">仅在你填好 Endpoint / Key 后打开</div></div>' +
+    '<div class="card glass"><h3>② 云沙盒</h3>' +
+      '<div class="fld"><label>代码在哪里跑</label><select id="sbMode">' +
+        [['builtin', '① 内置服务商（e2b 兼容）'], ['self', '② 我自己的服务器（云 / 本地）']]
+          .map(([k, n]) => '<option value="' + k + '"' + (((sb.mode || 'builtin') === k) ? ' selected' : '') + '>' + n + '</option>').join('') +
+        '</select></div>' +
+      (((sb.mode || 'builtin') === 'self')
+        ? '<div class="fld"><label>我的服务器地址</label><input id="sbEndpoint" value="' + esc(sb.endpoint) + '" placeholder="http://192.168.1.10:8000 或 https://sandbox.example.com"></div>' +
+          '<div class="fld"><label>执行路径</label><input id="sbExecPath" value="' + esc(sb.execPath || '/exec') + '" placeholder="/exec"></div>' +
+          '<div class="fld"><label>密钥（可选）</label><input id="sbKey" type="password" value="' + esc(sb.apiKey) + '" placeholder="没有就留空"></div>' +
+          '<div class="hint2 mt">约定：<code>POST {地址}{执行路径}</code>，body <code>{"code":"…","lang":"python"}</code>，返回 <code>{"stdout":"…","stderr":"…"}</code> 或纯文本。你的服务器需要允许跨域（CORS）。</div>'
+        : '<div class="fld"><label>服务商</label><select id="sbProvider">' +
+            ['e2b', 'daytona', 'modal', '自建 / 其它'].map((x) => '<option' + (sb.provider === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
+          '<div class="fld"><label>沙盒 API Endpoint</label><input id="sbEndpoint" value="' + esc(sb.endpoint) + '" placeholder="https://api.e2b.dev"></div>' +
+          '<div class="fld"><label>沙盒 API Key</label><input id="sbKey" type="password" value="' + esc(sb.apiKey) + '" placeholder="填入你自己的沙盒密钥"></div>' +
+          '<div class="hint2 mt">协议：<code>POST /sandboxes</code> 创建 · <code>POST /sandboxes/{id}/code</code> 执行 · <code>DELETE /sandboxes/{id}</code> 销毁（e2b 兼容）。</div>') +
+      '<div class="switch"><div><div class="lbl">启用云沙盒</div><div class="dsc">仅在你填好地址 / Key 后打开</div></div>' +
         '<div class="tgl' + (sb.enabled ? ' on' : '') + '" data-tool="sandbox"></div></div>' +
       '<div class="row mt"><button class="btn pri fix" data-act="sandbox-test">测试云沙盒</button>' +
         '<span class="kv">' + (sb.lastOk ? '上次连通：' + relTime(sb.lastOk) : '尚未测试连通') + '</span></div>' +
-      '<div class="hint2 mt">协议：<code>POST /sandboxes</code> 创建 · <code>POST /sandboxes/{id}/code</code> 执行 · <code>DELETE /sandboxes/{id}</code> 销毁（e2b 兼容）。浏览器直连沙盒可能被 CORS 拦，桌面端不受影响。</div>' +
     '</div>' +
 
     '<div class="card glass"><h3>③ 主题外观</h3>' +
@@ -2110,19 +2137,11 @@ function renderSettings() {
     '</div>' +
   '</div></div>';
 
+  const sbm = $('#sbMode');
+  if (sbm) sbm.addEventListener('change', () => { persistCfg(); save(); renderSettings(); });
   const pick = $('#cfgPick');
   if (pick) pick.addEventListener('change', () => { persistCfg(); S.settings.activeProviderId = pick.value; save(); renderSettings(); });
-  const pre = $('#cfgPreset');
-  if (pre) pre.addEventListener('change', () => {
-    const p = PRESETS.find((x) => x.id === pre.value);
-    if (!p) return;
-    const u = $('#cfgUrl'), n = $('#cfgName');
-    if (u && p.baseUrl) u.value = p.baseUrl;
-    if (n && p.id !== 'custom') n.value = p.name;
-    if (!p.baseUrl && p.hint) toast(p.name + '：' + p.hint, '');
-    else if (!p.baseUrl) toast('请在下方填入 ' + p.name + ' 的 API 地址', '');
-  });
-  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
+  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbExecPath', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
     const e = $(sel); if (e) e.addEventListener('change', () => { persistCfg(); save(); });
   });
 }
@@ -2144,7 +2163,9 @@ function persistCfg() {
   const ghc = S.settings.github || (S.settings.github = {});
   if ($('#ghToken')) ghc.token = $('#ghToken').value.trim();
   const sb = S.settings.sandbox;
+  if ($('#sbMode')) sb.mode = $('#sbMode').value;
   if ($('#sbProvider')) sb.provider = $('#sbProvider').value;
+  if ($('#sbExecPath')) sb.execPath = $('#sbExecPath').value.trim() || '/exec';
   if ($('#sbEndpoint')) sb.endpoint = $('#sbEndpoint').value.trim();
   if ($('#sbKey')) sb.apiKey = $('#sbKey').value.trim();
 }
@@ -2960,7 +2981,32 @@ async function sandboxCreate() {
   if (!id) throw new Error('创建沙盒失败：' + JSON.stringify(r).slice(0, 200));
   return id;
 }
+/* 自有服务器模式：一个极简约定，方便你自己实现
+ *   POST  {endpoint}{execPath}   body: {"code":"...","lang":"python"}
+ *   返回  {"stdout":"...","stderr":"..."} 或 纯文本
+ */
+async function sandboxRunSelf(code, lang) {
+  const sb = S.settings.sandbox || {};
+  if (!sb.endpoint) throw new Error('未配置自有服务器地址（设置 → 云沙盒）');
+  const base = String(sb.endpoint).trim().replace(/\/+$/, '');
+  const url = base + (sb.execPath || '/exec');
+  const headers = { 'Content-Type': 'application/json' };
+  if (sb.apiKey) headers['Authorization'] = 'Bearer ' + sb.apiKey;
+  let r;
+  try {
+    r = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ code: String(code), lang: lang || 'python' }) });
+  } catch (e) {
+    throw new Error('请求自有服务器失败 → ' + url + '\n原因：' + (e.message || e) + '\n' + fetchHint(url, e));
+  }
+  const txt = await r.text();
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' · ' + txt.slice(0, 200));
+  let j = null; try { j = JSON.parse(txt); } catch (e) { /* 纯文本 */ }
+  if (!j) return { id: 'self', out: txt, err: '', raw: txt };
+  const flat = (v) => [].concat(v == null ? '' : v).join('\n');
+  return { id: 'self', out: flat(j.stdout != null ? j.stdout : (j.out != null ? j.out : j.output)), err: flat(j.stderr != null ? j.stderr : j.err), raw: j };
+}
 async function sandboxRun(code, id) {
+  if (((S.settings.sandbox || {}).mode || 'builtin') === 'self') return sandboxRunSelf(code);
   const sid = id || await sandboxCreate();
   const r = await sbFetch('/sandboxes/' + sid + '/code', { method: 'POST', body: JSON.stringify({ code: String(code) }) });
   const out = [].concat(r.stdout || r.logs?.stdout || []).join('\n');
@@ -3925,8 +3971,8 @@ function openProviderDialog(existing) {
   const needUrl = presetId === 'custom' || !(PRESETS.find((x) => x.id === presetId) || {}).baseUrl;
 
   modal('<h3>' + (isEdit ? '编辑服务商' : '添加服务商') + '</h3>' +
-    '<div class="dsc">从预设里选一个，<b>名称与 API 地址会自动填好</b>；只有「自定义地址」才需要手填。</div>' +
-    '<div class="fld"><label>预设</label><select id="pvPreset">' + opts + '</select><div class="hint2" id="pvHint"></div></div>' +
+    '<div class="dsc">统一按 <b>OpenAI 兼容协议</b>接入，不再区分厂商预设。</div>' +
+    '<div class="hint2" id="pvHint">任何兼容 OpenAI 协议的服务都能用：官方 / 中转站 / 自建 / 本地推理，填 Base URL + Key 即可。</div>' +
     '<div class="fld"><label>名称</label><input id="pvName" value="' + esc(cur ? cur.name : '') + '"></div>' +
     '<div class="fld"' + (needUrl ? '' : ' hidden') + ' id="pvUrlFld"><label>API Base URL（OpenAI 兼容）</label>' +
       '<input id="pvUrl" value="' + esc(cur ? cur.baseUrl : '') + '" placeholder="https://api.example.com/v1"></div>' +
@@ -3939,25 +3985,19 @@ function openProviderDialog(existing) {
       const sel = m.querySelector('#pvPreset'), nameEl = m.querySelector('#pvName');
       const urlFld = m.querySelector('#pvUrlFld'), urlEl = m.querySelector('#pvUrl'), hintEl = m.querySelector('#pvHint');
       const sync = (silent) => {
-        const ps = PRESETS.find((x) => x.id === sel.value); if (!ps) return;
-        if (ps.id === 'custom') {
-          urlFld.hidden = false;
-          hintEl.textContent = '自定义地址：请在下方填写 API Base URL。';
-          return;
-        }
-        nameEl.value = ps.name;
-        if (ps.baseUrl) { urlEl.value = ps.baseUrl; urlFld.hidden = true; }
-        else { urlFld.hidden = false; urlEl.placeholder = '请填写 ' + ps.name + ' 的接入地址'; }
-        hintEl.textContent = ps.hint || (ps.baseUrl ? '地址已自动填好，可直接使用。' : '');
-        if (!silent && !ps.baseUrl) toast(ps.name + '：' + (ps.hint || '请填入接入地址'));
+        const ps = (sel && PRESETS.find((x) => x.id === sel.value)) || PRESETS[0]; if (!ps) return;
+        urlFld.hidden = false;                       // 地址始终可见可改
+        if (!urlEl.value) urlEl.value = ps.baseUrl || '';
+        if (!nameEl.value) nameEl.value = ps.name;
+        hintEl.textContent = ps.hint || '';
       };
-      sel.addEventListener('change', () => sync(false));
+      if (sel) sel.addEventListener('change', () => sync(false));
       sync(true);
       m.addEventListener('click', (ev) => {
         const x = ev.target.closest('[data-x]'); if (!x) return;
         if (x.dataset.x === 'ok') {
-          const ps = PRESETS.find((y) => y.id === sel.value);
-          const name = (nameEl.value || '').trim() || (ps && ps.id !== 'custom' ? ps.name : '');
+          const ps = PRESETS.find((y) => y.id === (sel ? sel.value : ''));
+          const name = (nameEl.value || '').trim() || (ps ? ps.name : '');
           const baseUrl = (urlEl.value || '').trim();
           const apiKey = (m.querySelector('#pvKey').value || '').trim();
           const models = (m.querySelector('#pvModels').value || '').split(',').map((s) => s.trim()).filter(Boolean);

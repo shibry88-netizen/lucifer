@@ -119,7 +119,7 @@ html[data-custom-accent="1"]{
 }
 
 /* ---------------- 基础 ---------------- */
-html,body{height:100%;margin:0}
+html,body{height:100%;margin:0;overscroll-behavior:none}
 body{
   background:var(--bg-0); color:var(--text-1); font-family:var(--font-cn);
   font-size:var(--fs-ui); line-height:1.65;
@@ -180,7 +180,8 @@ html[data-glass="0"] .glass::before{display:none}
 .gold-text{background:var(--brand-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* ---------------- 布局 ---------------- */
-.app{position:relative;z-index:2;display:flex;height:100vh;overflow:hidden}
+/* 100dvh 跟随移动端动态工具栏，避免 100vh 溢出导致顶部露白/底部被截 */
+.app{position:relative;z-index:2;display:flex;height:100vh;height:100dvh;overflow:hidden}
 .side{
   width:268px;min-width:268px;background:var(--bg-1);border-right:1px solid var(--line-subtle);
   display:flex;flex-direction:column;transition:margin-left 240ms var(--ease-in-out);contain:layout;
@@ -253,7 +254,7 @@ html[data-glass="0"] .top{backdrop-filter:none;background:var(--bg-1)}
 .icon-btn:hover{background:var(--accent-soft);color:var(--text-1);transform:translateY(-1px)}
 .icon-btn:active{transform:translateY(0) scale(.95)}
 .icon-btn.on{background:var(--accent-soft);color:var(--accent)}
-.burger i{display:block;width:15px;height:1.5px;border-radius:2px;background:currentColor;margin:2.5px 0;transition:width var(--dur-base) var(--ease-out)}
+.burger i{display:block;width:15px;height:1.5px;border-radius:2px;background:currentColor;margin:1.5px 0;transition:width var(--dur-base) var(--ease-out)}
 .burger:hover i:nth-child(1),.burger:hover i:nth-child(3){width:10px}
 .top-info{min-width:0;flex:1}
 .top-info .t1{font-size:var(--fs-ui);display:flex;align-items:center;gap:7px}
@@ -822,7 +823,10 @@ html[data-glass="0"] .agent-menu-btn{background:var(--bg-1)}
 .agent-item.is-main .nm{color:var(--brand-200)}
 
 @media (max-width:639px){
-  .nav-menu{display:none}
+  /* 此前这里直接 display:none，移动端点 ☰ 等于没反应。改为底部抽屉。 */
+  .nav-menu{left:8px !important;right:8px !important;width:auto !important;
+    top:auto !important;bottom:calc(8px + env(safe-area-inset-bottom)) !important;
+    max-height:min(72dvh,620px)}
   .composer-meta{gap:8px;margin-bottom:8px}
   .model-pill{height:34px}
   .model-pill .name{max-width:92px}

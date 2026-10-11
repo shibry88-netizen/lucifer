@@ -94,19 +94,11 @@ function mdRender(src) {
 
 /* ------------------------- 预设 Provider ------------------------- */
 /* 主力：DeepSeek / 智谱 GLM / 小米 MiMo；中转站用于走 GPT 等海外模型 */
+/* 不再维护厂商预设列表：统一按 OpenAI 兼容协议配置。
+ * 任何兼容服务（官方 / 中转站 / 自建 / 本地）只需填 Base URL + Key。 */
 const PRESETS = [
-  { id: 'deepseek', name: 'DeepSeek 深度求索', baseUrl: 'https://api.deepseek.com/v1', hint: '国内直连稳定' },
-  { id: 'zhipu', name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', hint: 'glm-4.6 / glm-4-plus' },
-  { id: 'mimo', name: '小米 MiMo', baseUrl: '', hint: '请填入你的 MiMo 接入地址' },
-  { id: 'relay', name: '中转站 / 自建代理', baseUrl: '', hint: '兼容 OpenAI 协议即可，走 GPT 等海外模型' },
-  { id: 'openai', name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', hint: '浏览器直连可能被 CORS 拦' },
-  { id: 'moonshot', name: 'Moonshot / Kimi', baseUrl: 'https://api.moonshot.cn/v1', hint: '' },
-  { id: 'dashscope', name: '通义千问 DashScope', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', hint: '' },
-  { id: 'siliconflow', name: 'SiliconFlow 硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', hint: '' },
-  { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', hint: '' },
-  { id: 'ollama', name: 'Ollama（本地）', baseUrl: 'http://localhost:11434/v1', hint: '' },
-  { id: 'lmstudio', name: 'LM Studio（本地）', baseUrl: 'http://localhost:1234/v1', hint: '' },
-  { id: 'custom', name: '自定义地址', baseUrl: '', hint: '' },
+  { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1',
+    hint: '任何兼容 OpenAI 协议的服务都可以：官方地址、中转站、自建代理、本地推理，填 Base URL 即可' },
 ];
 
 /* 主题预设（主色相 h / 饱和 s / 明度 l）—— 默认靛紫，与第一版配色一致 */
@@ -149,10 +141,10 @@ function defaultState() {
   return {
     v: 3,
     settings: {
-      providers: [{ id: pid, name: 'DeepSeek 深度求索', baseUrl: 'https://api.deepseek.com/v1', apiKey: '', models: ['deepseek-chat', 'deepseek-reasoner'] }],
+      providers: [{ id: pid, name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiKey: '', models: ['gpt-4o', 'gpt-4o-mini'] }],
       activeProviderId: pid,
       defaultModel: 'deepseek-chat',
-      sandbox: { endpoint: '', apiKey: '', enabled: false, provider: 'e2b', lastOk: 0, note: '' },
+      sandbox: { mode: 'builtin', endpoint: '', apiKey: '', execPath: '/exec', enabled: false, provider: 'e2b', lastOk: 0, note: '' },
       search: { provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 },
       github: { token: '', user: '', enabled: false, lastOk: 0, defaultPrivate: true },
       maxRounds: 6,
@@ -309,11 +301,35 @@ function modal(html, onMount) {
 }
 
 /* ------------------------- API ------------------------- */
+/* 没写协议时的默认协议判定。
+ * 之前一律补 https://，导致指向 http 的自建中转 / 本地服务必然 fetch 失败。
+ * 规则：本机、局域网、无点主机名（nas、server 等）→ http://，其余 → https:// */
+function pickScheme(u) {
+  const host = String(u).split('/')[0].replace(/^\[[^\]]+\]/, (m) => m).split('@').pop();
+  const name = host.replace(/:\d+$/, '');
+  const isLocal =
+    /^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(name) ||
+    /^10\./.test(name) || /^192\.168\./.test(name) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(name) ||
+    /\.local$/i.test(name) ||
+    !name.includes('.');
+  return isLocal ? 'http://' : 'https://';
+}
 function joinUrl(base, path) {
   if (!base) return '';
   let b = String(base).trim().replace(/\/+$/, '');
-  if (!/^https?:\/\//i.test(b)) b = 'https://' + b;
+  if (!/^[a-z][a-z0-9+.\-]*:\/\//i.test(b)) b = pickScheme(b) + b;
   return b + path;
+}
+/* 把 fetch 失败翻译成人能看懂的原因，并带上真实 URL */
+function fetchHint(url, e) {
+  const u = String(url || '');
+  if (location.protocol === 'https:' && /^http:\/\//i.test(u))
+    return '页面是 https，却请求 http 接口 —— 被浏览器按混合内容拦下。改用 https，或使用桌面端 / 安卓端。';
+  if (/localhost|127\.0\.0\.1|192\.168\.|10\.|\[::1\]|\.local/i.test(u))
+    return '本地/内网地址不可达 —— 确认服务已启动、端口正确；网页版受浏览器限制时请改用桌面端。';
+  if (e && e.name === 'AbortError') return '请求被取消。';
+  return '地址不可达 / DNS 解析失败 / 被网络策略拦截（也可能是该服务不允许浏览器直连）。';
 }
 function apiHeaders(p) {
   const h = { 'Content-Type': 'application/json' };
@@ -350,7 +366,7 @@ async function streamChat(agent, messages, onDelta, signal, onUsage) {
   try { r = await doFetch(); }
   catch (e) {
     if (e && e.name === 'AbortError') throw e;
-    throw new Error('网络请求失败：' + (e.message || e) + '（可能是 CORS 或地址不可达）');
+    throw new Error('请求失败 → ' + url + '\n原因：' + (e.message || e) + '\n' + fetchHint(url, e));
   }
   // 少数服务商不认 stream_options，回退重试一次
   if (!r.ok && (r.status === 400 || r.status === 422)) {

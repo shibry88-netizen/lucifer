@@ -252,7 +252,32 @@ async function sandboxCreate() {
   if (!id) throw new Error('创建沙盒失败：' + JSON.stringify(r).slice(0, 200));
   return id;
 }
+/* 自有服务器模式：一个极简约定，方便你自己实现
+ *   POST  {endpoint}{execPath}   body: {"code":"...","lang":"python"}
+ *   返回  {"stdout":"...","stderr":"..."} 或 纯文本
+ */
+async function sandboxRunSelf(code, lang) {
+  const sb = S.settings.sandbox || {};
+  if (!sb.endpoint) throw new Error('未配置自有服务器地址（设置 → 云沙盒）');
+  const base = String(sb.endpoint).trim().replace(/\/+$/, '');
+  const url = base + (sb.execPath || '/exec');
+  const headers = { 'Content-Type': 'application/json' };
+  if (sb.apiKey) headers['Authorization'] = 'Bearer ' + sb.apiKey;
+  let r;
+  try {
+    r = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ code: String(code), lang: lang || 'python' }) });
+  } catch (e) {
+    throw new Error('请求自有服务器失败 → ' + url + '\n原因：' + (e.message || e) + '\n' + fetchHint(url, e));
+  }
+  const txt = await r.text();
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' · ' + txt.slice(0, 200));
+  let j = null; try { j = JSON.parse(txt); } catch (e) { /* 纯文本 */ }
+  if (!j) return { id: 'self', out: txt, err: '', raw: txt };
+  const flat = (v) => [].concat(v == null ? '' : v).join('\n');
+  return { id: 'self', out: flat(j.stdout != null ? j.stdout : (j.out != null ? j.out : j.output)), err: flat(j.stderr != null ? j.stderr : j.err), raw: j };
+}
 async function sandboxRun(code, id) {
+  if (((S.settings.sandbox || {}).mode || 'builtin') === 'self') return sandboxRunSelf(code);
   const sid = id || await sandboxCreate();
   const r = await sbFetch('/sandboxes/' + sid + '/code', { method: 'POST', body: JSON.stringify({ code: String(code) }) });
   const out = [].concat(r.stdout || r.logs?.stdout || []).join('\n');

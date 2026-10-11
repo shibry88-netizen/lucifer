@@ -353,8 +353,8 @@ function openProviderDialog(existing) {
   const needUrl = presetId === 'custom' || !(PRESETS.find((x) => x.id === presetId) || {}).baseUrl;
 
   modal('<h3>' + (isEdit ? '编辑服务商' : '添加服务商') + '</h3>' +
-    '<div class="dsc">从预设里选一个，<b>名称与 API 地址会自动填好</b>；只有「自定义地址」才需要手填。</div>' +
-    '<div class="fld"><label>预设</label><select id="pvPreset">' + opts + '</select><div class="hint2" id="pvHint"></div></div>' +
+    '<div class="dsc">统一按 <b>OpenAI 兼容协议</b>接入，不再区分厂商预设。</div>' +
+    '<div class="hint2" id="pvHint">任何兼容 OpenAI 协议的服务都能用：官方 / 中转站 / 自建 / 本地推理，填 Base URL + Key 即可。</div>' +
     '<div class="fld"><label>名称</label><input id="pvName" value="' + esc(cur ? cur.name : '') + '"></div>' +
     '<div class="fld"' + (needUrl ? '' : ' hidden') + ' id="pvUrlFld"><label>API Base URL（OpenAI 兼容）</label>' +
       '<input id="pvUrl" value="' + esc(cur ? cur.baseUrl : '') + '" placeholder="https://api.example.com/v1"></div>' +
@@ -367,25 +367,19 @@ function openProviderDialog(existing) {
       const sel = m.querySelector('#pvPreset'), nameEl = m.querySelector('#pvName');
       const urlFld = m.querySelector('#pvUrlFld'), urlEl = m.querySelector('#pvUrl'), hintEl = m.querySelector('#pvHint');
       const sync = (silent) => {
-        const ps = PRESETS.find((x) => x.id === sel.value); if (!ps) return;
-        if (ps.id === 'custom') {
-          urlFld.hidden = false;
-          hintEl.textContent = '自定义地址：请在下方填写 API Base URL。';
-          return;
-        }
-        nameEl.value = ps.name;
-        if (ps.baseUrl) { urlEl.value = ps.baseUrl; urlFld.hidden = true; }
-        else { urlFld.hidden = false; urlEl.placeholder = '请填写 ' + ps.name + ' 的接入地址'; }
-        hintEl.textContent = ps.hint || (ps.baseUrl ? '地址已自动填好，可直接使用。' : '');
-        if (!silent && !ps.baseUrl) toast(ps.name + '：' + (ps.hint || '请填入接入地址'));
+        const ps = (sel && PRESETS.find((x) => x.id === sel.value)) || PRESETS[0]; if (!ps) return;
+        urlFld.hidden = false;                       // 地址始终可见可改
+        if (!urlEl.value) urlEl.value = ps.baseUrl || '';
+        if (!nameEl.value) nameEl.value = ps.name;
+        hintEl.textContent = ps.hint || '';
       };
-      sel.addEventListener('change', () => sync(false));
+      if (sel) sel.addEventListener('change', () => sync(false));
       sync(true);
       m.addEventListener('click', (ev) => {
         const x = ev.target.closest('[data-x]'); if (!x) return;
         if (x.dataset.x === 'ok') {
-          const ps = PRESETS.find((y) => y.id === sel.value);
-          const name = (nameEl.value || '').trim() || (ps && ps.id !== 'custom' ? ps.name : '');
+          const ps = PRESETS.find((y) => y.id === (sel ? sel.value : ''));
+          const name = (nameEl.value || '').trim() || (ps ? ps.name : '');
           const baseUrl = (urlEl.value || '').trim();
           const apiKey = (m.querySelector('#pvKey').value || '').trim();
           const models = (m.querySelector('#pvModels').value || '').split(',').map((s) => s.trim()).filter(Boolean);
