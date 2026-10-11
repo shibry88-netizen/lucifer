@@ -295,7 +295,15 @@ function modal(html, onMount) {
   m.innerHTML = '<div class="dlg glass">' + html + '</div>';
   document.body.appendChild(m);
   requestAnimationFrame(() => m.classList.add('in'));
-  const close = () => { m.classList.remove('in'); setTimeout(() => m.remove(), 220); };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); }
+  };
+  const close = () => {
+    document.removeEventListener('keydown', onKey, true);
+    m.classList.remove('in');
+    setTimeout(() => m.remove(), 220);
+  };
+  document.addEventListener('keydown', onKey, true);
   m.addEventListener('mousedown', (e) => { if (e.target === m) close(); });
   if (onMount) onMount(m, close);
 }

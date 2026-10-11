@@ -1,5 +1,5 @@
 /* =======================================================================
- * LUCIFER · 多智能体中枢  ——  工具与集成（Part 4 / 4）
+ * LUCIFER · 多智能体中枢  ——  工具与集成（Part 4 / 5）
  * 云沙盒工具 / 联网检索 / 会话 ZIP 导出 / 图片与文件 / GitHub 集成
  * ===================================================================== */
 
@@ -574,6 +574,4 @@ function toolOpHTML(i, icon, title, body, o) {
     '<div class="ob"><div class="prose">' + (body ? mdRender(body) : '<span class="kv">（无输出）</span>') + '</div></div></div>';
 }
 
-/* ------------------------- 启动（必须放在最后） ------------------------- */
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-else boot();
+/* 启动由 Part 5 末尾负责 */

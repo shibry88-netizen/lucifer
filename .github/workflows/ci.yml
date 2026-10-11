@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 只读 workflow，最小权限
+permissions:
+  contents: read
+
+# 连续 push / 多 PR 时取消旧 run，省私有仓库 minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 升级此版本号会使浏览器缓存 miss 一次（预期行为）
+  PW_VERSION: '1.49.0'
+
+jobs:
+  ci:
+    name: Build sync + syntax + PWA + E2E
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 1) index.html 必须与 build.mjs 的产物逐字节一致
+      - name: Verify index.html matches src/ build
+        run: |
+          node build.mjs
+          if ! git diff --exit-code -- index.html; then
+            echo "::error::index.html is out of sync with src/ - run node build.mjs locally and commit the result"
+            git diff -- index.html | head -n 120
+            exit 1
+          fi
+          echo "index.html is in sync with src/"
+
+      # 2) 源码语法检查
+      - name: Syntax check src/*.js
+        run: |
+          for f in src/*.js; do
+            echo "node --check $f"
+            node --check "$f"
+          done
+
+      # 3) 单文件体积预算：只报警告，不 fail
+      - name: Check single-file size (warn above 400 KB)
+        run: |
+          SIZE=$(stat -c%s index.html)
+          LIMIT=$((400 * 1024))
+          KB=$((SIZE / 1024))
+          echo "index.html = ${SIZE} bytes (${KB} KB, budget 400 KB)"
+          echo "| index.html | ${KB} KB / 400 KB |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$SIZE" -gt "$LIMIT" ]; then
+            echo "::warning::index.html exceeds the 400 KB budget (${KB} KB)"
+          fi
+
+      # 4) PWA 完整性
+      - name: Validate PWA assets
+        run: |
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("manifest.webmanifest", "utf8"));
+            if (!m.name) throw new Error("manifest.webmanifest: missing name");
+            const icons = m.icons || [];
+            if (!icons.length) throw new Error("manifest.webmanifest: no icons declared");
+            for (const ic of icons) {
+              const src = ic.src || ic.url || "";
+              if (!src) throw new Error("manifest.webmanifest: icon without src");
+              if (/^https?:/.test(src)) continue;
+              const p = src.replace(/^\/+/, "");
+              if (!fs.existsSync(p)) throw new Error("manifest.webmanifest: icon not found: " + p);
+            }
+            console.log("manifest.webmanifest OK: " + m.name + " (" + icons.length + " icons)");
+          '
+          for f in sw.js icon-192.png icon-512.png; do
+            [ -f "$f" ] || { echo "::error::missing PWA asset: $f"; exit 1; }
+            echo "found $f"
+          done
+
+      # 5) E2E：无头 Chromium 冒烟测试
+      # 缓存策略：浏览器二进制 + npm 缓存 + 隔离安装目录 .ci-e2e 一起缓存
+      - name: Cache Playwright browsers + npm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.npm
+            .ci-e2e
+          key: pw-${{ runner.os }}-${{ env.PW_VERSION }}
+          restore-keys: |
+            pw-${{ runner.os }}-
+
+      - name: Install Playwright + Chromium
+        run: |
+          # 必须隔离安装：在仓库根跑 npm install 会把根 package.json 里
+          # Tauri/Electron/Capacitor 的 devDependencies 一起装，
+          # electron 二进制下载又慢又容易在 runner 上失败
+          mkdir -p .ci-e2e
+          cd .ci-e2e
+          [ -f package.json ] || npm init -y
+          npm install "playwright@${{ env.PW_VERSION }}"
+          npx playwright install --with-deps chromium
+
+      - name: E2E smoke - load app in headless Chromium
+        run: |
+          # 单进程完成：起静态服务 + 跑 playwright 断言，
+          # 避免后台进程管理与 heredoc 嵌套问题
+          cd .ci-e2e
+          node -e '
+            const http = require("http");
+            const fs = require("fs");
+            const path = require("path");
+            const { chromium } = require("playwright");
+
+            const root = path.resolve(process.cwd(), "..");
+            const types = {
+              ".html": "text/html; charset=utf-8",
+              ".js": "text/javascript",
+              ".css": "text/css",
+              ".json": "application/json",
+              ".webmanifest": "application/manifest+json",
+              ".svg": "image/svg+xml",
+              ".png": "image/png"
+            };
+            const server = http.createServer((req, res) => {
+              const u = new URL(req.url, "http://localhost");
+              let p = path.join(root, decodeURIComponent(u.pathname));
+              if (p === root) p = path.join(root, "index.html");
+              if (!p.startsWith(root + path.sep)) { res.writeHead(403); res.end(); return; }
+              fs.readFile(p, (err, data) => {
+                if (err) { res.writeHead(404); res.end("not found"); return; }
+                res.writeHead(200, { "Content-Type": types[path.extname(p)] || "application/octet-stream" });
+                res.end(data);
+              });
+            });
+
+            server.listen(8901, "127.0.0.1", async () => {
+              let code = 0;
+              const browser = await chromium.launch();
+              const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+              const errors = [];
+              page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+              page.on("pageerror", (e) => errors.push(String(e)));
+              try {
+                await page.goto("http://127.0.0.1:8901/index.html", { waitUntil: "domcontentloaded", timeout: 20000 });
+                await page.waitForSelector("#app", { timeout: 10000 });
+                await page.waitForTimeout(1500);
+                const html = await page.evaluate(() => {
+                  const el = document.querySelector("#app");
+                  return el ? el.innerHTML : "";
+                });
+                if (!html || !html.trim()) { console.error("#app exists but is empty"); code = 1; }
+                if (errors.length) {
+                  console.error("Console/page errors:");
+                  for (const e of errors) console.error(" - " + e);
+                  code = 1;
+                }
+                if (code === 0) console.log("E2E OK: #app rendered, no console errors");
+              } catch (e) {
+                console.error("E2E failed: " + e);
+                code = 1;
+              } finally {
+                await browser.close().catch(() => {});
+                server.close();
+              }
+              process.exit(code);
+            });
+          '

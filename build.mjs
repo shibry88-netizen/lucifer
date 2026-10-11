@@ -5,7 +5,7 @@ const root = new URL('.', import.meta.url).pathname;
 const src = path.join(root, 'src');
 
 const css = fs.readFileSync(path.join(src, 'style.css'), 'utf8');
-const js = ['app.part1.js', 'app.part2.js', 'app.part3.js', 'app.part4.js']
+const js = ['app.part1.js', 'app.part2.js', 'app.part3.js', 'app.part4.js', 'app.part5.js']
   .map((f) => fs.readFileSync(path.join(src, f), 'utf8')).join('\n\n');
 
 // 语法自检

@@ -1,5 +1,5 @@
 /* =======================================================================
- * LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 4）
+ * LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 5）
  * ===================================================================== */
 
 /* ------------------------- 头像 ------------------------- */
@@ -16,13 +16,10 @@ function renderShell() {
   const m = modelFor(a);
   const p = providerFor(a);
   const v = S.ui.view;
-  const right = v === 'chat'
-    ? '<button class="btn sm" data-act="newtopic">＋ 新会话</button>'
-      + '<button class="btn sm" data-act="goto-search">检索</button>'
-      + '<button class="btn sm" data-act="goto-docs">文档</button>'
-      + '<button class="btn sm" data-act="goto-settings">设置</button>'
-      + (isMain(a) ? '' : '<button class="btn sm pri" data-act="editagent">Agent 设置</button>')
-    : '<button class="btn sm" data-act="goto-chat">← 返回对话</button>';
+  const right = (v === 'chat' ? '' : '<button class="btn sm keep" data-act="goto-chat">← 返回对话</button>') +
+    '<button class="agent-menu-btn" data-act="agent-menu" aria-expanded="false" title="' + esc(a.name) + '">' +
+      avatarHTML(a, 'sm') + '<span class="nm">' + esc(a.name) + '</span><span class="chev">⌄</span>' +
+    '</button>';
 
   document.getElementById('app').innerHTML =
   '<aside class="side' + (S.ui.sideOpen ? ' open' : '') + '">' +
@@ -32,8 +29,7 @@ function renderShell() {
     '</div>' +
     '<div class="side-search"><input id="agentSearch" placeholder="搜索会话 / Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
     '<div class="side-scroll">' +
-      '<div class="side-label">主控</div><div id="mainList"></div>' +
-      '<div class="side-label">Agents <button data-act="addagent" title="新建 Agent">＋</button></div><div id="subList"></div>' +
+      '<div class="side-label">Agents <button data-act="addagent" title="新建 Agent">＋</button></div><div id="agentList"></div>' +
       '<div class="side-label">会话 <button data-act="newtopic" title="新会话">＋</button></div><div id="topicList"></div>' +
     '</div>' +
     '<div class="side-foot">' +
@@ -46,7 +42,7 @@ function renderShell() {
   '<div class="side-mask" data-act="close-side"></div>' +
   '<main class="main">' +
     '<header class="top">' +
-      '<button class="icon-btn burger" data-act="toggle-side" title="菜单"><i></i><i></i><i></i></button>' +
+      '<button class="icon-btn burger" data-act="nav-menu" aria-expanded="false" title="菜单"><i></i><i></i><i></i></button>' +
       avatarHTML(a, 'lg' + (isMain(a) ? ' main-ring' : '')) +
       '<div class="top-info">' +
         '<div class="t1"><b>' + esc(a.name) + '</b><span class="tag ' + (isMain(a) ? 'main' : '') + '">@' + esc(a.roleName) + '</span></div>' +
@@ -72,16 +68,14 @@ function renderAgentLists() {
   const q = (S.ui._q || '').toLowerCase();
   const f = (a) => !q || a.name.toLowerCase().includes(q) || a.roleName.toLowerCase().includes(q);
   const item = (a) =>
-    '<div class="agent-item' + (a.id === S.ui.activeAgentId ? ' on' : '') + '" data-agent="' + a.id + '">' +
+    '<div class="agent-item' + (a.id === S.ui.activeAgentId ? ' on' : '') + (a.isMain ? ' is-main' : '') + '" data-agent="' + a.id + '">' +
       avatarHTML(a) +
-      '<div class="meta"><div class="nm">' + esc(a.name) + '</div>' +
+      '<div class="meta"><div class="nm">' + esc(a.name) + (a.isMain ? ' ✦' : '') + '</div>' +
       '<div class="rl">@' + esc(a.roleName) + ((a.skills && a.skills.length) ? ' · ' + a.skills.length + ' skill' : '') + '</div></div>' +
     '</div>';
-  const ml = $('#mainList'), sl = $('#subList');
-  const mains = S.agents.filter((a) => a.isMain && f(a));
-  const subs = S.agents.filter((a) => !a.isMain && f(a));
-  if (ml) ml.innerHTML = mains.map(item).join('') || '<div class="kv pad">无</div>';
-  if (sl) sl.innerHTML = subs.map(item).join('') || '<div class="kv pad">还没有其他 Agent，点上方 ＋ 新建</div>';
+  const al = $('#agentList');
+  const all = S.agents.filter(f).slice().sort((x, y) => (y.isMain ? 1 : 0) - (x.isMain ? 1 : 0));
+  if (al) al.innerHTML = all.map(item).join('') || '<div class="kv pad">还没有 Agent，点上方 ＋ 新建</div>';
 }
 
 /* ------------------------- 视图分发 ------------------------- */
@@ -90,6 +84,7 @@ function renderView() {
   if (v === 'docs') renderDocs();
   else if (v === 'settings') renderSettings();
   else if (v === 'agent') renderAgentEdit();
+  else if (v === 'providers') renderProviders();
   else if (v === 'search') renderSearch();
   else if (v === 'github') renderGithub();
   else renderChat();
@@ -191,7 +186,7 @@ function renderChat() {
   $('#body').innerHTML =
     '<div class="scroll" id="msgs"><div class="msgs">' + inner + '</div></div>' +
     '<div class="composer"><div class="composer-in">' +
-      statsBubbleHTML(topic) +
+      '<div class="composer-meta">' + statsBubbleHTML(topic) + modelPillHTML() + '</div>' +
       pendingHTML() +
       '<div class="cbox glass">' +
         '<textarea id="input" rows="1" placeholder="给 ' + esc(a.name) + ' 发消息…"></textarea>' +
@@ -389,16 +384,12 @@ async function runTurn(userText) {
           o.status = 'running';
           opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
           scrollDown();
-          const pre = opsEl.querySelectorAll('.op')[i] ? opsEl.querySelectorAll('.op')[i].querySelectorAll('.prose')[1] : null;
+          /* 子 Agent 被主控调用时：前端不展示它的对话过程，只把结果回传给主控 */
           try {
             const subMsgs = [{ role: 'system', content: buildSystem(target) }, { role: 'user', content: o.task }];
-            let acc = '', subUsage = null, last2 = 0;
+            let acc = '', subUsage = null;
             const t1 = now();
-            const r = await streamChat(target, subMsgs, (c) => {
-              acc += c;
-              const t = now();
-              if (t - last2 > 60) { last2 = t; if (pre) { pre.innerHTML = mdRender(stripDirectives(acc)) + '<span class="caret">▍</span>'; scrollDown(); } }
-            }, ABORT.signal, (u) => { subUsage = u; });
+            const r = await streamChat(target, subMsgs, (c) => { acc += c; }, ABORT.signal, (u) => { subUsage = u; });
             const dt1 = now() - t1;
             o.result = stripDirectives(r); o.status = 'done';
             bumpStats(topic, target, subUsage, subMsgs, r, dt1);
@@ -584,6 +575,10 @@ function renderSettings() {
     '<div class="sub">API 地址、可用模型、云沙盒 —— 数据仅保存在本机浏览器（localStorage），不会上传。</div>' +
 
     '<div class="card glass"><h3>① API 配置</h3>' +
+      '<div class="row" style="margin-bottom:16px">' +
+        '<button class="btn pri fix" data-act="goto-providers">打开「服务商与模型」』</button>' +
+        '<span class="kv" style="flex:1">推荐用新面板：选预设自动填地址，支持多个服务商随时切换。下面的卡片仅作兼容保留。</span>' +
+      '</div>' +
       '<div class="fld"><label>选择要编辑的配置</label><div class="row">' +
         '<select id="cfgPick">' + ps.map((p) => '<option value="' + p.id + '"' + (p.id === ap.id ? ' selected' : '') + '>' + esc(p.name) + ' — ' + esc(p.baseUrl || '未填地址') + '</option>').join('') + '</select>' +
         '<button class="btn fix" data-act="addProvider">＋ 新增</button></div></div>' +
@@ -878,6 +873,43 @@ function saveDocIfDirty() {
 async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
+    case 'nav-menu': { toggleNavMenu(); return; }
+    case 'agent-menu': { toggleAgentMenu(); return; }
+    case 'model-menu': { toggleModelMenu(); return; }
+    case 'goto-providers': { closePops(); S.ui.view = 'providers'; S.ui._provOpen = S.ui._provOpen || null; save(); renderShell(); return; }
+    case 'switch-agent': {
+      const id = e.target.closest('[data-id]').dataset.id;
+      closePops();
+      S.ui.activeAgentId = id; S.ui.activeTopicId = null; S.ui.drafting = ''; S.ui.view = 'chat';
+      save(); renderShell(); return;
+    }
+    case 'switch-main': {
+      const m = mainAgent(); closePops();
+      S.ui.activeAgentId = m.id; S.ui.activeTopicId = null; S.ui.drafting = ''; S.ui.view = 'chat';
+      save(); renderShell(); return;
+    }
+    case 'pick-model': {
+      const el = e.target.closest('[data-model]');
+      const m = el ? el.dataset.model : '';
+      const a = curAgent(); a.model = m || '';
+      closePops(); save(); renderShell();
+      toast(m ? '「' + a.name + '」使用模型：' + m : '「' + a.name + '」跟随全局默认', 'ok');
+      return;
+    }
+    case 'pick-provider': {
+      const el = e.target.closest('[data-id]');
+      const a = curAgent(); a.providerId = el.dataset.id; a.model = '';
+      closePops(); save(); renderShell();
+      const p = getProvider(a.providerId);
+      toast('「' + a.name + '」切换服务商：' + (p ? p.name : ''), 'ok');
+      return;
+    }
+    case 'toggle-rail': {
+      S.ui.collapsed = !S.ui.collapsed;
+      const app = document.getElementById('app');
+      if (app) app.classList.toggle('collapsed', S.ui.collapsed);
+      closePops(); save(); return;
+    }
     case 'goto-github': { S.ui.view = 'github'; S.ui.gh = S.ui.gh || {}; closeSideMobile(); save(); renderShell(); if (S.settings.github.token) ghLoadRepos(); return; }
     case 'attach': { const f = $('#fileInput'); if (f) f.click(); return; }
     case 'rmattach': { removePending(+e.target.closest('[data-i]').dataset.i); return; }

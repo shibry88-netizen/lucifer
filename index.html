@@ -748,6 +748,108 @@ html[data-glass="0"] .bubble{background:var(--bg-1);backdrop-filter:none}
   .thin-hide{display:none}
 }
 
+/* =======================================================================
+ * 浮层体系（☰ 二级菜单 / 模型选择器 / Agent 菜单）
+ * 依据 UI 设计师规范：只动画 transform/opacity/filter
+ * ===================================================================== */
+:root{
+  --tint-hover:rgba(124,108,255,.10);
+  --tint-active:rgba(124,108,255,.16);
+  --tint-selected:rgba(124,108,255,.13);
+  --shadow-float:0 1px 2px rgba(0,0,0,.28),0 14px 34px -10px rgba(0,0,0,.5),0 44px 84px -34px rgba(70,44,190,.42);
+}
+[data-theme="light"]{
+  --tint-hover:rgba(99,83,232,.08);--tint-active:rgba(99,83,232,.13);--tint-selected:rgba(99,83,232,.10);
+  --shadow-float:0 1px 2px rgba(24,20,60,.06),0 14px 34px -12px rgba(24,20,60,.18),0 36px 68px -34px rgba(76,60,200,.20);
+}
+.pop{
+  position:fixed;z-index:70;padding:8px;border:1px solid var(--glass-line);border-radius:var(--r-lg);
+  background:var(--glass-bg);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  box-shadow:var(--shadow-float),inset 0 1px 0 rgba(255,255,255,.16);
+}
+html[data-glass="0"] .pop{background:var(--bg-1);backdrop-filter:none}
+.pop[hidden]{display:none}
+.pop.in{animation:popIn 180ms var(--ease-out) both}
+@keyframes popIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+.pop-mask{position:fixed;inset:0;z-index:65;background:transparent}
+
+.nav-item{display:flex;align-items:center;gap:10px;width:100%;height:40px;padding:0 10px;border-radius:var(--r-sm);
+  cursor:pointer;font-size:var(--fs-ui);color:var(--text-1);position:relative;isolation:isolate;text-align:left;user-select:none}
+.nav-item::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--tint-hover);opacity:0;transition:opacity var(--dur-quick) var(--ease-out)}
+.nav-item:hover::before{opacity:1}
+.nav-item:active{transform:scale(.985)}
+.nav-item.on::before{background:var(--tint-selected);opacity:1}
+.nav-item .ico{width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:var(--r-xs);color:var(--text-2);font-size:15px;transition:color var(--dur-quick)}
+.nav-item:hover .ico{color:var(--accent)}
+.nav-item .meta{margin-left:auto;font-size:11px;color:var(--text-3);max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-mono)}
+.nav-item .kbd{margin-left:auto;font-size:10.5px;color:var(--text-3);font-family:var(--font-mono)}
+.nav-group-title{height:28px;display:flex;align-items:center;padding:0 10px;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);user-select:none}
+.nav-divider{height:1px;margin:6px 10px;background:var(--line-subtle)}
+.nav-menu{width:244px;max-height:min(460px,calc(100dvh - 90px));overflow-y:auto}
+
+.composer-meta{display:flex;align-items:center;gap:12px;margin:0 2px 9px;min-height:30px}
+.composer-meta .bubble{position:static;bottom:auto;left:auto;margin:0 auto 0 0}
+.model-pill{height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 10px 0 6px;flex:none;
+  border-radius:var(--r-lg);border:1px solid var(--glass-line);background:var(--glass-bg);cursor:pointer;position:relative;
+  transition:border-color var(--dur-base),transform var(--dur-base) var(--ease-out)}
+html[data-glass="0"] .model-pill{background:var(--bg-2)}
+.model-pill::after{content:"";position:absolute;inset:-7px}
+.model-pill:hover{border-color:var(--line-strong);transform:translateY(-1px)}
+.model-pill[aria-expanded="true"]{background:var(--tint-active);border-color:var(--line-strong)}
+.model-pill .dot{width:20px;height:20px;border-radius:var(--r-xs);display:grid;place-items:center;font-size:11px;background:var(--tint-selected);color:var(--accent);flex:none}
+.model-pill .name{font-size:12px;color:var(--text-2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-mono)}
+.model-pill .chev{font-size:11px;color:var(--text-3);transition:transform var(--dur-base) var(--ease-out)}
+.model-pill[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.model-pop{width:296px;display:flex;flex-direction:column;max-height:min(420px,64dvh)}
+.model-pop .search{height:34px;border-radius:var(--r-sm);padding:0 10px;font-size:12.5px;background:var(--bg-1);border:1px solid var(--line-subtle);margin-bottom:8px}
+.model-pop .list{max-height:290px;overflow-y:auto;overscroll-behavior:contain}
+.model-opt{display:flex;align-items:center;gap:8px;height:36px;padding:0 10px;border-radius:var(--r-sm);cursor:pointer;position:relative;isolation:isolate}
+.model-opt::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--tint-hover);opacity:0;transition:opacity var(--dur-quick)}
+.model-opt:hover::before{opacity:1}
+.model-opt.on::before{background:var(--tint-selected);opacity:1}
+.model-opt .nm{flex:1;min-width:0;font-size:12.5px;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-mono)}
+.model-opt .ck{font-size:13px;color:var(--accent);opacity:0;flex:none}
+.model-opt.on .ck{opacity:1}
+.model-pop .prov-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 2px 8px}
+.model-pop .prov-row .chip{font-size:11px;padding:3px 9px}
+
+.agent-menu-btn{height:36px;display:inline-flex;align-items:center;gap:8px;padding:0 10px 0 6px;max-width:230px;
+  border-radius:var(--r-md);border:1px solid var(--glass-line);background:var(--glass-bg);cursor:pointer;position:relative;
+  transition:border-color var(--dur-base)}
+html[data-glass="0"] .agent-menu-btn{background:var(--bg-1)}
+.agent-menu-btn::after{content:"";position:absolute;inset:-4px}
+.agent-menu-btn:hover{border-color:var(--line-strong)}
+.agent-menu-btn[aria-expanded="true"]{background:var(--tint-active);border-color:var(--line-strong)}
+.agent-menu-btn .nm{font-size:13px;color:var(--text-1);max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.agent-menu-btn .chev{font-size:11px;color:var(--text-3);transition:transform var(--dur-base) var(--ease-out)}
+.agent-menu-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.agent-pop{width:254px}
+.agent-pop .agent-item{display:flex;align-items:center;gap:10px;width:100%;height:42px;padding:0 10px;border-radius:var(--r-sm);
+  cursor:pointer;position:relative;isolation:isolate;text-align:left}
+.agent-pop .agent-item::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--tint-hover);opacity:0;transition:opacity var(--dur-quick)}
+.agent-pop .agent-item:hover::before{opacity:1}
+.agent-pop .agent-item.on::before{background:var(--tint-selected);opacity:1}
+.agent-pop .agent-item .col{min-width:0;flex:1;display:flex;flex-direction:column;line-height:1.25}
+.agent-pop .agent-item .nm{font-size:13px;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent-pop .agent-item .rl{font-size:11px;color:var(--text-3);font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent-pop .agent-item .ck{font-size:13px;color:var(--accent);flex:none}
+.agent-pop .agent-item.dis{opacity:.42;pointer-events:none}
+.agent-pop .agent-list{max-height:300px;overflow-y:auto}
+.agent-item.is-main .nm{color:var(--brand-200)}
+
+@media (max-width:639px){
+  .nav-menu{display:none}
+  .composer-meta{gap:8px;margin-bottom:8px}
+  .model-pill{height:34px}
+  .model-pill .name{max-width:92px}
+  .model-pop{width:min(320px,calc(100vw - 24px))}
+  .model-opt{height:44px}
+  .agent-menu-btn{max-width:168px;padding:0 8px 0 5px}
+  .agent-menu-btn .nm{max-width:80px}
+  .agent-pop{width:min(272px,calc(100vw - 20px))}
+  .agent-pop .agent-item{height:48px}
+}
+
 </style>
 </head>
 <body>
@@ -1053,7 +1155,15 @@ function modal(html, onMount) {
   m.innerHTML = '<div class="dlg glass">' + html + '</div>';
   document.body.appendChild(m);
   requestAnimationFrame(() => m.classList.add('in'));
-  const close = () => { m.classList.remove('in'); setTimeout(() => m.remove(), 220); };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); }
+  };
+  const close = () => {
+    document.removeEventListener('keydown', onKey, true);
+    m.classList.remove('in');
+    setTimeout(() => m.remove(), 220);
+  };
+  document.addEventListener('keydown', onKey, true);
   m.addEventListener('mousedown', (e) => { if (e.target === m) close(); });
   if (onMount) onMount(m, close);
 }
@@ -1310,7 +1420,7 @@ async function fetchSkill(url) {
 
 
 /* =======================================================================
- * LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 4）
+ * LUCIFER · 多智能体中枢  ——  渲染与交互（Part 2 / 5）
  * ===================================================================== */
 
 /* ------------------------- 头像 ------------------------- */
@@ -1327,13 +1437,10 @@ function renderShell() {
   const m = modelFor(a);
   const p = providerFor(a);
   const v = S.ui.view;
-  const right = v === 'chat'
-    ? '<button class="btn sm" data-act="newtopic">＋ 新会话</button>'
-      + '<button class="btn sm" data-act="goto-search">检索</button>'
-      + '<button class="btn sm" data-act="goto-docs">文档</button>'
-      + '<button class="btn sm" data-act="goto-settings">设置</button>'
-      + (isMain(a) ? '' : '<button class="btn sm pri" data-act="editagent">Agent 设置</button>')
-    : '<button class="btn sm" data-act="goto-chat">← 返回对话</button>';
+  const right = (v === 'chat' ? '' : '<button class="btn sm keep" data-act="goto-chat">← 返回对话</button>') +
+    '<button class="agent-menu-btn" data-act="agent-menu" aria-expanded="false" title="' + esc(a.name) + '">' +
+      avatarHTML(a, 'sm') + '<span class="nm">' + esc(a.name) + '</span><span class="chev">⌄</span>' +
+    '</button>';
 
   document.getElementById('app').innerHTML =
   '<aside class="side' + (S.ui.sideOpen ? ' open' : '') + '">' +
@@ -1343,8 +1450,7 @@ function renderShell() {
     '</div>' +
     '<div class="side-search"><input id="agentSearch" placeholder="搜索会话 / Agent…" value="' + esc(S.ui._q || '') + '"></div>' +
     '<div class="side-scroll">' +
-      '<div class="side-label">主控</div><div id="mainList"></div>' +
-      '<div class="side-label">Agents <button data-act="addagent" title="新建 Agent">＋</button></div><div id="subList"></div>' +
+      '<div class="side-label">Agents <button data-act="addagent" title="新建 Agent">＋</button></div><div id="agentList"></div>' +
       '<div class="side-label">会话 <button data-act="newtopic" title="新会话">＋</button></div><div id="topicList"></div>' +
     '</div>' +
     '<div class="side-foot">' +
@@ -1357,7 +1463,7 @@ function renderShell() {
   '<div class="side-mask" data-act="close-side"></div>' +
   '<main class="main">' +
     '<header class="top">' +
-      '<button class="icon-btn burger" data-act="toggle-side" title="菜单"><i></i><i></i><i></i></button>' +
+      '<button class="icon-btn burger" data-act="nav-menu" aria-expanded="false" title="菜单"><i></i><i></i><i></i></button>' +
       avatarHTML(a, 'lg' + (isMain(a) ? ' main-ring' : '')) +
       '<div class="top-info">' +
         '<div class="t1"><b>' + esc(a.name) + '</b><span class="tag ' + (isMain(a) ? 'main' : '') + '">@' + esc(a.roleName) + '</span></div>' +
@@ -1383,16 +1489,14 @@ function renderAgentLists() {
   const q = (S.ui._q || '').toLowerCase();
   const f = (a) => !q || a.name.toLowerCase().includes(q) || a.roleName.toLowerCase().includes(q);
   const item = (a) =>
-    '<div class="agent-item' + (a.id === S.ui.activeAgentId ? ' on' : '') + '" data-agent="' + a.id + '">' +
+    '<div class="agent-item' + (a.id === S.ui.activeAgentId ? ' on' : '') + (a.isMain ? ' is-main' : '') + '" data-agent="' + a.id + '">' +
       avatarHTML(a) +
-      '<div class="meta"><div class="nm">' + esc(a.name) + '</div>' +
+      '<div class="meta"><div class="nm">' + esc(a.name) + (a.isMain ? ' ✦' : '') + '</div>' +
       '<div class="rl">@' + esc(a.roleName) + ((a.skills && a.skills.length) ? ' · ' + a.skills.length + ' skill' : '') + '</div></div>' +
     '</div>';
-  const ml = $('#mainList'), sl = $('#subList');
-  const mains = S.agents.filter((a) => a.isMain && f(a));
-  const subs = S.agents.filter((a) => !a.isMain && f(a));
-  if (ml) ml.innerHTML = mains.map(item).join('') || '<div class="kv pad">无</div>';
-  if (sl) sl.innerHTML = subs.map(item).join('') || '<div class="kv pad">还没有其他 Agent，点上方 ＋ 新建</div>';
+  const al = $('#agentList');
+  const all = S.agents.filter(f).slice().sort((x, y) => (y.isMain ? 1 : 0) - (x.isMain ? 1 : 0));
+  if (al) al.innerHTML = all.map(item).join('') || '<div class="kv pad">还没有 Agent，点上方 ＋ 新建</div>';
 }
 
 /* ------------------------- 视图分发 ------------------------- */
@@ -1401,6 +1505,7 @@ function renderView() {
   if (v === 'docs') renderDocs();
   else if (v === 'settings') renderSettings();
   else if (v === 'agent') renderAgentEdit();
+  else if (v === 'providers') renderProviders();
   else if (v === 'search') renderSearch();
   else if (v === 'github') renderGithub();
   else renderChat();
@@ -1502,7 +1607,7 @@ function renderChat() {
   $('#body').innerHTML =
     '<div class="scroll" id="msgs"><div class="msgs">' + inner + '</div></div>' +
     '<div class="composer"><div class="composer-in">' +
-      statsBubbleHTML(topic) +
+      '<div class="composer-meta">' + statsBubbleHTML(topic) + modelPillHTML() + '</div>' +
       pendingHTML() +
       '<div class="cbox glass">' +
         '<textarea id="input" rows="1" placeholder="给 ' + esc(a.name) + ' 发消息…"></textarea>' +
@@ -1700,16 +1805,12 @@ async function runTurn(userText) {
           o.status = 'running';
           opsEl.innerHTML = msg.ops.map((x, j) => opHTML(x, j)).join('');
           scrollDown();
-          const pre = opsEl.querySelectorAll('.op')[i] ? opsEl.querySelectorAll('.op')[i].querySelectorAll('.prose')[1] : null;
+          /* 子 Agent 被主控调用时：前端不展示它的对话过程，只把结果回传给主控 */
           try {
             const subMsgs = [{ role: 'system', content: buildSystem(target) }, { role: 'user', content: o.task }];
-            let acc = '', subUsage = null, last2 = 0;
+            let acc = '', subUsage = null;
             const t1 = now();
-            const r = await streamChat(target, subMsgs, (c) => {
-              acc += c;
-              const t = now();
-              if (t - last2 > 60) { last2 = t; if (pre) { pre.innerHTML = mdRender(stripDirectives(acc)) + '<span class="caret">▍</span>'; scrollDown(); } }
-            }, ABORT.signal, (u) => { subUsage = u; });
+            const r = await streamChat(target, subMsgs, (c) => { acc += c; }, ABORT.signal, (u) => { subUsage = u; });
             const dt1 = now() - t1;
             o.result = stripDirectives(r); o.status = 'done';
             bumpStats(topic, target, subUsage, subMsgs, r, dt1);
@@ -1895,6 +1996,10 @@ function renderSettings() {
     '<div class="sub">API 地址、可用模型、云沙盒 —— 数据仅保存在本机浏览器（localStorage），不会上传。</div>' +
 
     '<div class="card glass"><h3>① API 配置</h3>' +
+      '<div class="row" style="margin-bottom:16px">' +
+        '<button class="btn pri fix" data-act="goto-providers">打开「服务商与模型」』</button>' +
+        '<span class="kv" style="flex:1">推荐用新面板：选预设自动填地址，支持多个服务商随时切换。下面的卡片仅作兼容保留。</span>' +
+      '</div>' +
       '<div class="fld"><label>选择要编辑的配置</label><div class="row">' +
         '<select id="cfgPick">' + ps.map((p) => '<option value="' + p.id + '"' + (p.id === ap.id ? ' selected' : '') + '>' + esc(p.name) + ' — ' + esc(p.baseUrl || '未填地址') + '</option>').join('') + '</select>' +
         '<button class="btn fix" data-act="addProvider">＋ 新增</button></div></div>' +
@@ -2189,6 +2294,43 @@ function saveDocIfDirty() {
 async function handleAct(act, e) {
   const a0 = curAgent();
   switch (act) {
+    case 'nav-menu': { toggleNavMenu(); return; }
+    case 'agent-menu': { toggleAgentMenu(); return; }
+    case 'model-menu': { toggleModelMenu(); return; }
+    case 'goto-providers': { closePops(); S.ui.view = 'providers'; S.ui._provOpen = S.ui._provOpen || null; save(); renderShell(); return; }
+    case 'switch-agent': {
+      const id = e.target.closest('[data-id]').dataset.id;
+      closePops();
+      S.ui.activeAgentId = id; S.ui.activeTopicId = null; S.ui.drafting = ''; S.ui.view = 'chat';
+      save(); renderShell(); return;
+    }
+    case 'switch-main': {
+      const m = mainAgent(); closePops();
+      S.ui.activeAgentId = m.id; S.ui.activeTopicId = null; S.ui.drafting = ''; S.ui.view = 'chat';
+      save(); renderShell(); return;
+    }
+    case 'pick-model': {
+      const el = e.target.closest('[data-model]');
+      const m = el ? el.dataset.model : '';
+      const a = curAgent(); a.model = m || '';
+      closePops(); save(); renderShell();
+      toast(m ? '「' + a.name + '」使用模型：' + m : '「' + a.name + '」跟随全局默认', 'ok');
+      return;
+    }
+    case 'pick-provider': {
+      const el = e.target.closest('[data-id]');
+      const a = curAgent(); a.providerId = el.dataset.id; a.model = '';
+      closePops(); save(); renderShell();
+      const p = getProvider(a.providerId);
+      toast('「' + a.name + '」切换服务商：' + (p ? p.name : ''), 'ok');
+      return;
+    }
+    case 'toggle-rail': {
+      S.ui.collapsed = !S.ui.collapsed;
+      const app = document.getElementById('app');
+      if (app) app.classList.toggle('collapsed', S.ui.collapsed);
+      closePops(); save(); return;
+    }
     case 'goto-github': { S.ui.view = 'github'; S.ui.gh = S.ui.gh || {}; closeSideMobile(); save(); renderShell(); if (S.settings.github.token) ghLoadRepos(); return; }
     case 'attach': { const f = $('#fileInput'); if (f) f.click(); return; }
     case 'rmattach': { removePending(+e.target.closest('[data-i]').dataset.i); return; }
@@ -2531,7 +2673,7 @@ function boot() {
 
 
 /* =======================================================================
- * LUCIFER · 多智能体中枢  ——  主题 / 会话 / 检索 / 文档 / 沙盒（Part 3 / 4）
+ * LUCIFER · 多智能体中枢  ——  主题 / 会话 / 检索 / 文档 / 沙盒（Part 3 / 5）
  * 主题引擎 / 会话列表 / 全文检索 / 对话内文档浏览 / 云沙盒 / 移动端
  * ===================================================================== */
 
@@ -2816,7 +2958,7 @@ window.CX = { sandboxRun, sandboxCreate, state: () => S };
 
 
 /* =======================================================================
- * LUCIFER · 多智能体中枢  ——  工具与集成（Part 4 / 4）
+ * LUCIFER · 多智能体中枢  ——  工具与集成（Part 4 / 5）
  * 云沙盒工具 / 联网检索 / 会话 ZIP 导出 / 图片与文件 / GitHub 集成
  * ===================================================================== */
 
@@ -3389,6 +3531,386 @@ function toolOpHTML(i, icon, title, body, o) {
     '<div class="oh"><span class="oi">' + icon + '</span><span class="ttl">' + title + '</span>' + st +
     '<span class="chev">⌄</span></div>' +
     '<div class="ob"><div class="prose">' + (body ? mdRender(body) : '<span class="kv">（无输出）</span>') + '</div></div></div>';
+}
+
+/* 启动由 Part 5 末尾负责 */
+
+
+/* =======================================================================
+ * LUCIFER · 多智能体中枢  ——  浮层与接入点（Part 5 / 5）
+ * 服务商管理（由「软件代码开发」Agent 产出后整合）
+ * ☰ 二级菜单 / 模型选择器 / 右上角 Agent 菜单（由「网页APPui设计师」Agent 规范落地）
+ * ===================================================================== */
+
+/* ------------------------- 浮层管理器 ------------------------- */
+let POP_OPEN = null;
+function closePops() {
+  document.querySelectorAll('.pop').forEach((p) => p.remove());
+  const m = document.querySelector('.pop-mask'); if (m) m.remove();
+  document.querySelectorAll('[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  POP_OPEN = null;
+}
+function showPop(key, anchor, html, opts) {
+  opts = opts || {};
+  if (POP_OPEN === key) { closePops(); return null; }
+  closePops();
+  const pop = document.createElement('div');
+  pop.className = 'pop ' + (opts.cls || '');
+  pop.innerHTML = html;
+  document.body.appendChild(pop);
+  const mask = document.createElement('div');
+  mask.className = 'pop-mask';
+  mask.addEventListener('mousedown', (e) => { e.preventDefault(); closePops(); });
+  document.body.appendChild(mask);
+  if (opts.after) opts.after(pop);
+  const r = anchor.getBoundingClientRect();
+  const pw = pop.offsetWidth || 240, ph = pop.offsetHeight || 200;
+  let left = opts.align === 'right' ? r.right - pw : r.left;
+  left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+  let top = r.bottom + 8;
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 8);
+  pop.style.left = left + 'px';
+  pop.style.top = top + 'px';
+  requestAnimationFrame(() => pop.classList.add('in'));
+  if (anchor.setAttribute) anchor.setAttribute('aria-expanded', 'true');
+  POP_OPEN = key;
+  return pop;
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && POP_OPEN) { e.stopPropagation(); closePops(); } });
+
+/* ------------------------- ☰ 二级菜单 ------------------------- */
+function navMenuHTML() {
+  const p = providerFor(curAgent());
+  return '<div class="nav-group-title">服务商与模型</div>' +
+      '<button class="nav-item" data-act="goto-providers"><span class="ico">◈</span>服务商与模型' +
+      '<span class="meta">' + esc(p ? p.name : '未配置') + '</span></button>' +
+    '<div class="nav-divider"></div>' +
+    '<div class="nav-group-title">工作区</div>' +
+      '<button class="nav-item" data-act="goto-docs"><span class="ico">▤</span>文档库</button>' +
+      '<button class="nav-item" data-act="goto-search"><span class="ico">⌕</span>历史检索<span class="kbd">⌘K</span></button>' +
+      '<button class="nav-item" data-act="goto-github"><span class="ico">⑂</span>GitHub</button>' +
+      '<button class="nav-item" data-act="export-zip"><span class="ico">⤓</span>导出当前会话 ZIP</button>' +
+    '<div class="nav-divider"></div>' +
+      '<button class="nav-item" data-act="addagent"><span class="ico">＋</span>新建 Agent</button>' +
+      '<button class="nav-item" data-act="goto-settings"><span class="ico">⚙</span>设置</button>' +
+      '<button class="nav-item" data-act="toggle-rail"><span class="ico">⇤</span>' + (S.ui.collapsed ? '展开侧栏' : '收起侧栏') + '<span class="kbd">⌘B</span></button>';
+}
+function toggleNavMenu() {
+  const anchor = document.querySelector('.burger');
+  if (!anchor) return;
+  showPop('nav', anchor, navMenuHTML(), { cls: 'nav-menu', align: 'left' });
+}
+
+/* ------------------------- 右上角 Agent 菜单 ------------------------- */
+function agentMenuHTML() {
+  const a = curAgent();
+  const list = S.agents.map((x) =>
+    '<button class="agent-item' + (x.id === a.id ? ' on' : '') + (x.isMain ? ' is-main' : '') +
+    '" data-act="switch-agent" data-id="' + x.id + '">' +
+      avatarHTML(x, 'sm') +
+      '<span class="col"><span class="nm">' + esc(x.name) + (x.isMain ? ' ✦' : '') + '</span>' +
+      '<span class="rl">@' + esc(x.roleName) + '</span></span>' +
+      (x.id === a.id ? '<span class="ck">✓</span>' : '') +
+    '</button>').join('');
+  return '<button class="agent-item" data-act="newtopic">' +
+      '<span class="ico" style="width:24px;text-align:center;color:var(--accent)">＋</span>' +
+      '<span class="col"><span class="nm">新对话</span><span class="rl">在当前 Agent 下开新会话</span></span></button>' +
+    '<button class="agent-item' + (a.isMain ? ' dis' : '') + '" data-act="switch-main">' +
+      '<span class="ico" style="width:24px;text-align:center;color:var(--accent)">✦</span>' +
+      '<span class="col"><span class="nm">切换到主控</span><span class="rl">回到总控 Agent</span></span></button>' +
+    '<div class="nav-divider"></div>' +
+    '<div class="nav-group-title">切换 Agent</div>' +
+    '<div class="agent-list">' + list + '</div>' +
+    '<div class="nav-divider"></div>' +
+    '<button class="agent-item" data-act="editagent">' +
+      '<span class="ico" style="width:24px;text-align:center">⚙</span>' +
+      '<span class="col"><span class="nm">Agent 设置</span><span class="rl">' + esc(a.name) + '</span></span></button>';
+}
+function toggleAgentMenu() {
+  const anchor = document.querySelector('.agent-menu-btn');
+  if (!anchor) return;
+  showPop('agent', anchor, agentMenuHTML(), { cls: 'agent-pop', align: 'right' });
+}
+
+/* ------------------------- 模型选择器 ------------------------- */
+function modelPillHTML() {
+  const a = curAgent();
+  const p = providerFor(a);
+  const m = modelFor(a);
+  const isGlobal = !a.model;
+  return '<button class="model-pill" data-act="model-menu" aria-expanded="false" ' +
+    'title="' + esc((p ? p.name : '无服务商') + ' · ' + (m || '未选择模型') + (isGlobal ? '（跟随全局）' : '')) + '">' +
+    '<span class="dot">◈</span><span class="name">' + esc(m || '未选择模型') + '</span><span class="chev">⌄</span></button>';
+}
+function modelListHTML(q) {
+  const a = curAgent();
+  const p = providerFor(a);
+  const models = (p && p.models) || [];
+  const list = models.filter((m) => !q || m.toLowerCase().indexOf(q) >= 0);
+  if (!list.length) {
+    return '<div class="empty" style="padding:22px 10px">' +
+      (models.length ? '没有匹配「' + esc(q) + '」的模型' : '该服务商还没有模型<br>去「服务商与模型」点拉取') + '</div>';
+  }
+  return list.map((m) =>
+    '<div class="model-opt' + (a.model === m ? ' on' : '') + '" data-act="pick-model" data-model="' + esc(m) + '">' +
+    '<span class="nm">' + esc(m) + '</span><span class="ck">✓</span></div>').join('');
+}
+function modelPopHTML() {
+  const a = curAgent();
+  const ps = S.settings.providers || [];
+  const cur = providerFor(a);
+  return '<div class="prov-row">' +
+      ps.map((x) => '<span class="chip' + (cur && x.id === cur.id ? ' on' : '') + '" data-act="pick-provider" data-id="' + x.id + '">' +
+        esc(x.name) + '</span>').join('') +
+      '<span class="chip" data-act="goto-providers">＋ 管理</span>' +
+    '</div>' +
+    '<input class="search" id="modelSearch" placeholder="搜索模型…" autocomplete="off">' +
+    '<div class="list" id="modelList">' + modelListHTML('') + '</div>' +
+    '<div class="nav-divider"></div>' +
+    '<div class="model-opt' + (!a.model ? ' on' : '') + '" data-act="pick-model" data-model="">' +
+    '<span class="nm">跟随全局默认 · ' + esc(S.settings.defaultModel || '未设置') + '</span><span class="ck">✓</span></div>';
+}
+function toggleModelMenu() {
+  const anchor = document.querySelector('.model-pill');
+  if (!anchor) return;
+  showPop('model', anchor, modelPopHTML(), {
+    cls: 'model-pop', align: 'right',
+    after: (pop) => {
+      const s = pop.querySelector('#modelSearch');
+      const l = pop.querySelector('#modelList');
+      if (s) {
+        s.addEventListener('input', () => {
+          const q = s.value.trim().toLowerCase();
+          if (l) l.innerHTML = modelListHTML(q);
+        });
+        if (!isNarrow()) setTimeout(() => s.focus(), 40);
+      }
+    },
+  });
+}
+
+/* ------------------------- 服务商管理面板 ------------------------- */
+let PROV_ROOT = null;
+
+function renderProviders() {
+  const body = document.getElementById('body');
+  if (!body) return;
+  S.ui.view = 'providers';
+  const ps = S.settings.providers || [];
+  const active = S.settings.activeProviderId;
+  const open = S.ui._provOpen || null;
+
+  const cards = ps.map((p) => {
+    const isActive = p.id === active;
+    const models = p.models || [];
+    const hasKey = !!p.apiKey;
+    const on = p.enabled !== false;
+    const head =
+      '<div class="row" style="align-items:center">' +
+        '<div class="fix" style="min-width:0;flex:1 1 auto">' +
+          '<div style="font-weight:600;font-size:var(--fs-h6)">' + esc(p.name || '未命名服务商') + '</div>' +
+          '<div class="kv" style="margin-top:4px;word-break:break-all">' + esc(p.baseUrl || '未填写 API 地址') + '</div>' +
+        '</div>' +
+        '<div class="fix" style="display:flex;gap:6px;flex-wrap:wrap">' +
+          (isActive ? '<span class="tag main">当前启用</span>' : '') +
+          (models.length ? '<span class="tag ok">模型 ' + models.length + '</span>' : '<span class="tag">模型 0</span>') +
+          (hasKey ? '<span class="tag ok">Key 已填</span>' : '<span class="tag err">Key 未填</span>') +
+        '</div>' +
+      '</div>';
+    const acts =
+      '<div class="row mt" style="gap:8px">' +
+        (isActive ? '' : '<button class="btn sm pri fix" data-act="prov-use" data-id="' + p.id + '">设为当前</button>') +
+        '<button class="btn sm fix" data-act="prov-pull" data-id="' + p.id + '">拉取模型</button>' +
+        '<button class="btn sm fix" data-act="prov-edit" data-id="' + p.id + '">编辑</button>' +
+        '<button class="btn sm danger fix" data-act="prov-del" data-id="' + p.id + '">删除</button>' +
+        '<span class="fix" style="flex:1 1 auto"></span>' +
+        '<button class="btn sm fix" data-act="prov-open" data-id="' + p.id + '">' + (open === p.id ? '收起 ▲' : '展开 ▼') + '</button>' +
+      '</div>';
+    let editor = '';
+    if (open === p.id) {
+      const def = S.settings.defaultModel;
+      const chips = models.length
+        ? models.map((m) => '<span class="chip' + (m === def ? ' on' : '') + '">' + esc(m) +
+            (m === def ? ' · 默认' : '') + '</span>').join('')
+        : '<span class="kv">还没有模型 —— 点上方「拉取模型」自动获取</span>';
+      editor =
+        '<div class="mt" style="border-top:1px solid var(--line-subtle);padding-top:14px">' +
+          '<div class="fld"><label>名称</label><input data-prov-f="name" data-id="' + p.id + '" value="' + esc(p.name || '') + '"></div>' +
+          '<div class="fld"><label>Base URL（OpenAI 兼容）</label><input data-prov-f="baseUrl" data-id="' + p.id + '" value="' + esc(p.baseUrl || '') + '"></div>' +
+          '<div class="fld"><label>API Key</label><input data-prov-f="apiKey" data-id="' + p.id + '" type="password" value="' + esc(p.apiKey || '') + '" placeholder="sk-…（仅存本机）"></div>' +
+          '<div class="fld"><label>模型列表 <span class="kv">' + models.length + ' 个 · 逗号分隔</span></label>' +
+            '<input data-prov-f="models" data-id="' + p.id + '" value="' + esc(models.join(', ')) + '">' +
+            '<div class="chips">' + chips + '</div></div>' +
+          '<div class="row"><button class="btn pri fix" data-act="prov-save" data-id="' + p.id + '">保存该服务商</button></div>' +
+        '</div>';
+    }
+    return '<div class="card">' + head + acts + editor + '</div>';
+  }).join('');
+
+  body.innerHTML =
+    '<div class="scroll"><div class="page">' +
+      '<h2>服务商与模型</h2>' +
+      '<div class="sub">从预设里挑一个，<b>API 地址会自动填好</b>，只需填 Key；拉取模型后即可在对话框右上角随时切换。数据仅存本机。</div>' +
+      '<div class="row" style="margin-bottom:16px">' +
+        '<div class="fix"><button class="btn pri fix" data-act="prov-add">＋ 添加服务商</button></div>' +
+        '<div class="fix"><button class="btn fix" data-act="goto-chat">← 返回对话</button></div>' +
+      '</div>' +
+      (cards || '<div class="empty">还没有服务商<br><br><button class="btn pri" data-act="prov-add">＋ 添加第一个服务商</button></div>') +
+    '</div></div>';
+
+  if (PROV_ROOT !== body) {
+    PROV_ROOT = body;
+    body.addEventListener('click', provPanelClick);
+    body.addEventListener('change', provFieldChange);
+    body.addEventListener('keydown', provFieldKey);
+  }
+}
+function provFieldChange(e) { const el = e.target; if (el && el.dataset && el.dataset.provF) provApplyField(el); }
+function provFieldKey(e) { if (e.key === 'Enter' && e.target && e.target.dataset && e.target.dataset.provF) provApplyField(e.target); }
+function provApplyField(el) {
+  const p = (S.settings.providers || []).find((x) => x.id === el.dataset.id);
+  if (!p) return;
+  const k = el.dataset.provF, v = el.value;
+  if (k === 'models') p.models = String(v).split(',').map((s) => s.trim()).filter(Boolean);
+  else p[k] = String(v).trim();
+  save();
+}
+function provPanelClick(e) {
+  const t = e.target; if (!t || !t.closest) return;
+  const btn = t.closest('[data-act]'); if (!btn) return;
+  const body = document.getElementById('body');
+  if (!body || !body.contains(btn)) return;
+  const act = btn.dataset.act;
+  if (act.indexOf('prov-') !== 0) return;
+  e.preventDefault(); e.stopPropagation();
+  provAct(act, btn);
+}
+async function provAct(act, btn) {
+  const id = btn.dataset.id;
+  const list = S.settings.providers || [];
+  const p = list.find((x) => x.id === id) || null;
+  switch (act) {
+    case 'prov-add': openProviderDialog(); return;
+    case 'prov-open': S.ui._provOpen = (S.ui._provOpen === id) ? null : id; renderProviders(); return;
+    case 'prov-edit': S.ui._provOpen = id; renderProviders(); return;
+    case 'prov-use': {
+      if (!p) return;
+      S.settings.activeProviderId = p.id;
+      if ((p.models || [])[0] && !S.settings.defaultModel) S.settings.defaultModel = p.models[0];
+      save(); renderProviders(); toast('当前服务商：' + p.name, 'ok'); return;
+    }
+    case 'prov-pull': {
+      if (!p) return;
+      if (!p.baseUrl) { toast('请先填写 Base URL', 'err'); return; }
+      const old = btn.textContent; btn.disabled = true; btn.textContent = '拉取中…';
+      try {
+        const ids = await pullModels(p); ids.sort(); p.models = ids;
+        if (!S.settings.defaultModel || ids.indexOf(S.settings.defaultModel) < 0) S.settings.defaultModel = ids[0];
+        save(); renderProviders(); toast('「' + p.name + '」获取到 ' + ids.length + ' 个模型', 'ok');
+      } catch (err) {
+        toast('拉取失败：' + (err.message || err), 'err');
+        btn.disabled = false; btn.textContent = old;
+      }
+      return;
+    }
+    case 'prov-save': {
+      if (!p) return;
+      const root = btn.closest('.card');
+      if (root) Array.from(root.querySelectorAll('[data-prov-f]')).forEach(provApplyField);
+      save(); renderProviders(); toast('已保存「' + p.name + '」', 'ok'); return;
+    }
+    case 'prov-del': {
+      if (!p) return;
+      if (list.length <= 1) { toast('至少保留一个服务商', 'err'); return; }
+      modal('<h3>删除服务商</h3><div class="dsc">确定删除「' + esc(p.name) + '」？地址、Key 与模型列表将一并移除。</div>' +
+        '<div class="act"><button class="btn" data-x="c">取消</button><button class="btn danger" data-x="ok">确认删除</button></div>',
+        (m, close) => {
+          m.addEventListener('click', (ev) => {
+            const x = ev.target.closest('[data-x]'); if (!x) return;
+            if (x.dataset.x === 'ok') {
+              const arr = S.settings.providers;
+              const i = arr.findIndex((y) => y.id === id);
+              if (i >= 0) arr.splice(i, 1);
+              if (S.settings.activeProviderId === id) S.settings.activeProviderId = arr.length ? arr[0].id : '';
+              if (S.ui._provOpen === id) S.ui._provOpen = null;
+              save(); renderProviders(); toast('已删除「' + p.name + '」', 'ok');
+            }
+            close();
+          });
+        });
+      return;
+    }
+  }
+}
+function openProviderDialog(existing) {
+  const isEdit = !!(existing && existing.id);
+  const cur = existing || null;
+  let presetId = 'custom';
+  if (cur) {
+    const hit = PRESETS.find((x) =>
+      (x.baseUrl && cur.baseUrl && x.baseUrl.replace(/\/+$/, '') === String(cur.baseUrl).replace(/\/+$/, '')) ||
+      (x.name && cur.name && x.name === cur.name));
+    presetId = hit ? hit.id : 'custom';
+  }
+  const opts = PRESETS.map((x) => '<option value="' + esc(x.id) + '"' + (x.id === presetId ? ' selected' : '') + '>' +
+    esc(x.name) + (x.hint ? ' —— ' + esc(x.hint) : '') + '</option>').join('');
+  const needUrl = presetId === 'custom' || !(PRESETS.find((x) => x.id === presetId) || {}).baseUrl;
+
+  modal('<h3>' + (isEdit ? '编辑服务商' : '添加服务商') + '</h3>' +
+    '<div class="dsc">从预设里选一个，<b>名称与 API 地址会自动填好</b>；只有「自定义地址」才需要手填。</div>' +
+    '<div class="fld"><label>预设</label><select id="pvPreset">' + opts + '</select><div class="hint2" id="pvHint"></div></div>' +
+    '<div class="fld"><label>名称</label><input id="pvName" value="' + esc(cur ? cur.name : '') + '"></div>' +
+    '<div class="fld"' + (needUrl ? '' : ' hidden') + ' id="pvUrlFld"><label>API Base URL（OpenAI 兼容）</label>' +
+      '<input id="pvUrl" value="' + esc(cur ? cur.baseUrl : '') + '" placeholder="https://api.example.com/v1"></div>' +
+    '<div class="fld"><label>API Key</label><input id="pvKey" type="password" value="' + esc(cur ? cur.apiKey : '') + '" placeholder="sk-…（仅存本机）"></div>' +
+    '<div class="fld"><label>模型列表（可选，逗号分隔；拉取后自动覆盖）</label>' +
+      '<input id="pvModels" value="' + esc(cur ? (cur.models || []).join(', ') : '') + '"></div>' +
+    '<div class="act"><button class="btn" data-x="c">取消</button>' +
+      '<button class="btn pri" data-x="ok">' + (isEdit ? '保存' : '添加') + '</button></div>',
+    (m, close) => {
+      const sel = m.querySelector('#pvPreset'), nameEl = m.querySelector('#pvName');
+      const urlFld = m.querySelector('#pvUrlFld'), urlEl = m.querySelector('#pvUrl'), hintEl = m.querySelector('#pvHint');
+      const sync = (silent) => {
+        const ps = PRESETS.find((x) => x.id === sel.value); if (!ps) return;
+        if (ps.id === 'custom') {
+          urlFld.hidden = false;
+          hintEl.textContent = '自定义地址：请在下方填写 API Base URL。';
+          return;
+        }
+        nameEl.value = ps.name;
+        if (ps.baseUrl) { urlEl.value = ps.baseUrl; urlFld.hidden = true; }
+        else { urlFld.hidden = false; urlEl.placeholder = '请填写 ' + ps.name + ' 的接入地址'; }
+        hintEl.textContent = ps.hint || (ps.baseUrl ? '地址已自动填好，可直接使用。' : '');
+        if (!silent && !ps.baseUrl) toast(ps.name + '：' + (ps.hint || '请填入接入地址'));
+      };
+      sel.addEventListener('change', () => sync(false));
+      sync(true);
+      m.addEventListener('click', (ev) => {
+        const x = ev.target.closest('[data-x]'); if (!x) return;
+        if (x.dataset.x === 'ok') {
+          const ps = PRESETS.find((y) => y.id === sel.value);
+          const name = (nameEl.value || '').trim() || (ps && ps.id !== 'custom' ? ps.name : '');
+          const baseUrl = (urlEl.value || '').trim();
+          const apiKey = (m.querySelector('#pvKey').value || '').trim();
+          const models = (m.querySelector('#pvModels').value || '').split(',').map((s) => s.trim()).filter(Boolean);
+          if (!name) { toast('请填写名称', 'err'); return; }
+          if (!baseUrl) { toast('请填写 API Base URL', 'err'); return; }
+          if (isEdit) {
+            const t = S.settings.providers.find((y) => y.id === existing.id);
+            if (!t) { toast('服务商不存在', 'err'); close(); return; }
+            t.name = name; t.baseUrl = baseUrl; t.apiKey = apiKey; t.models = models;
+            toast('已更新「' + name + '」', 'ok');
+          } else {
+            const np = { id: uid('pr'), name, baseUrl, apiKey, models: models };
+            S.settings.providers.push(np);
+            if (!S.settings.activeProviderId) S.settings.activeProviderId = np.id;
+            toast('已添加「' + name + '」', 'ok');
+          }
+          save(); renderProviders();
+        }
+        close();
+      });
+    });
 }
 
 /* ------------------------- 启动（必须放在最后） ------------------------- */
