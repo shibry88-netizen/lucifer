@@ -25,3 +25,10 @@ keystore.properties
 release.keystore
 *.keystore
 *.jks
+
+# 明文签名密钥：显式再挡一层（GitHub 网页上传会绕过 gitignore，
+# 所以上传后务必确认 release.keystore 不在提交里）
+/release.keystore
+/android/release.keystore
+/android/keystore.properties
+# 注意：*.keystore.enc 是密文，需要入库，不要忽略

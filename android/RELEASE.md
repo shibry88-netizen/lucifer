@@ -9,39 +9,57 @@
 - `android/keystore.properties` 里的密码同样备份；
 - 这两样东西**都不进 Git**（见 `.gitignore`）。
 
-## 当前交付包（2026-10-11）
+## 当前交付包（2026-10-11 · v4 UI）
 
-`android/release/LUCIFER-v3.0.apk` —— **已切换为正式签名**（首版交付的 v3.0 是 debug 签名，已作废）。
+`android/release/LUCIFER-v3.0.apk` —— 正式签名。本版为**视觉重构 v4** 之后的包
+（设计令牌重写 / 右上角「工具」二级菜单 / 柔和动效 / 全屏适配 / 浅色脏块修复）。
 
 | 项 | 值 |
 |---|---|
 | 文件 | `android/release/LUCIFER-v3.0.apk` |
-| 大小 | 356 KB |
-| 签名证书 SHA-256 | `d95b43709ef951304fb81f3b1dc299bfcc1d3c99e47dfade98213272ffcef41a`（正式密钥，与 `release.keystore` 一致） |
+| 大小 | 365736 字节（357.2 KB） |
+| 签名证书 SHA-256 | `d95b43709ef951304fb81f3b1dc299bfcc1d3c99e47dfade98213272ffcef41a` |
 | 签名方案 | v1 + v2 + v3 |
-| 包内应用 | `assets/index.html` md5 = `df94e87d64619186974637996ea75b58`，与 `dist/index.html` 逐字节一致 |
-| APK SHA-256 | `76da45b0284c21ec1e3dd1a433a546615dea4fe1db7e7a319a666e7c2ac261bc`（见 `LUCIFER-v3.0.apk.sha256`） |
+| 包内应用 | `assets/index.html` md5 = `b523a7a998b4e9177d7fd4180c85bf1f`，与 `dist/index.html` 逐字节一致 |
+| APK SHA-256 | `c993ceeee47f839b8df7125c15f5b13956b364942351934a216682c419100be4`（见 `LUCIFER-v3.0.apk.sha256`） |
 
-> 装过 debug 签名 v3.0 的设备**必须先卸载** `com.lucifer.app` 再安装，否则会报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`。
+> 首版交付的 v3.0 是 **debug 签名**，与正式签名不兼容：装过旧包的设备必须先卸载
+> `com.lucifer.app` 再安装，否则报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`。
+> 之后所有版本只要都用同一把密钥，即可正常覆盖升级。
 
-## 密钥信息
+## 加密存放（仓库里只有密文）
 
-| 项 | 值 |
-|---|---|
-| 文件 | `android/release.keystore` |
-| 类型 | PKCS12 |
-| 别名 | `lucifer` |
-| 算法 | RSA 4096 / SHA256withRSA |
-| 主题 | `CN=LUCIFER, OU=LUCIFER, O=Lucifer, C=CN` |
-| 有效期 | 2026-10-11 → 2056-10-03（30 年） |
-| SHA-256 指纹 | `D9:5B:43:70:9E:F9:51:30:4F:B8:1F:3B:1D:C2:99:BF:CC:1D:3C:99:E4:7D:FA:DE:98:21:32:72:FF:CE:F4:1A` |
-| SHA-1 指纹 | `AC:8B:3B:8A:B6:03:EC:66:DD:86:A0:98:A4:FC:42:DB:87:FA:90:1A` |
+**仓库内不再放明文 keystore**。密钥以 AES-256 加密后存放：
 
-> 密码见《LUCIFER 交接文档》。这里不写，避免仓库万一转公开时泄露。
+```
+android/release.keystore.enc     ← 入库的密文
+```
+
+加密参数（解密时必须完全一致）：
+
+```bash
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha256 \
+  -in android/release.keystore.enc \
+  -out android/release.keystore \
+  -pass env:KS_PASS
+```
+
+或加密（复原入库文件）：
+
+```bash
+KS_PASS='<口令>' openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -md sha256 -salt \
+  -in android/release.keystore -out android/release.keystore.enc -pass env:KS_PASS
+```
+
+> **口令不在仓库里。** 见 LobeHub 文档《晨星 · Lucifer 交接文档》的
+> 「安卓签名密钥（LUCIFER / 晨星）解密说明」一节 —— 那一节同时注明了密文对应哪个应用。
+
+`android/release.keystore`（明文）与 `android/keystore.properties`（口令）都在 `.gitignore` 里，
+只在本地存在，供 `build.sh` 使用。
 
 ## 重建环境
 
-把两个文件放回 `android/`：
+先解密出明文，再把两个文件放回 `android/`：
 
 ```
 android/release.keystore      ← 密钥本体
