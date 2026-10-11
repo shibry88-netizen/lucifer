@@ -29,10 +29,10 @@
 
 ## 加密存放（仓库里只有密文）
 
-**仓库内不再放明文 keystore**。密钥以 AES-256 加密后存放：
+**本仓库已公开，签名密钥不在其中。** 密钥密文存放在私有仓 [`lucifer-secrets`](https://github.com/shibry88-netizen/lucifer-secrets)：
 
 ```
-android/release.keystore.enc     ← 入库的密文
+lucifer-secrets / android-release.keystore.enc   ← 私有仓里的密文
 ```
 
 加密参数（解密时必须完全一致）：

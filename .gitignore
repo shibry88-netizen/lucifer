@@ -32,3 +32,5 @@ release.keystore
 /android/release.keystore
 /android/keystore.properties
 # 注意：*.keystore.enc 是密文，需要入库，不要忽略
+# 签名密钥密文已迁到私有仓 lucifer-secrets，主仓库公开后不再包含
+/android/release.keystore.enc
