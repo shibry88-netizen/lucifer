@@ -148,8 +148,11 @@ function defaultState() {
       search: { provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 },
       github: { token: '', user: '', enabled: false, lastOk: 0, defaultPrivate: true },
       maxRounds: 6,
+      ctx: { autoCompact: true, tokenBudget: 24000, keepMessages: 12 },
+      receiptLimit: 1200,
+      mcp: { servers: [] },
       theme: {
-        mode: 'dark', preset: 'indigo', h: 248, s: '100%', l: '71%',
+        mode: 'dark', preset: 'gold', h: 42, s: '56%', l: '62%',
         radius: 1, fontScale: 1, glassBlur: 22, aurora: true, custom: false,
       },
     },
@@ -178,9 +181,9 @@ const KEY = 'lucifer.state.v1';
 const LEGACY_KEYS = ['agenthub.state.v2', 'agenthub.state.v1', 'lucifer.state.v0'];
 function readStored() {
   try {
-    const v = localStorage.getItem(KEY);
+    const v = Store.get(KEY);
     if (v) return v;
-    for (const k of LEGACY_KEYS) { const o = localStorage.getItem(k); if (o) return o; }
+    for (const k of LEGACY_KEYS) { const o = Store.get(k); if (o) return o; }
   } catch (e) {}
   return null;
 }
@@ -197,6 +200,8 @@ function load() {
     o.docs = Array.isArray(o.docs) ? o.docs : d.docs;
     o.topics = Array.isArray(o.topics) ? o.topics : [];
     o.ui = Object.assign(d.ui, o.ui || {});
+    o.settings.ctx = Object.assign(d.settings.ctx, (o.settings || {}).ctx || {});
+    o.settings.mcp = Object.assign(d.settings.mcp, (o.settings || {}).mcp || {});
     o.settings.theme = Object.assign(d.settings.theme, (o.settings || {}).theme || {});
     o.settings.search = Object.assign(d.settings.search, (o.settings || {}).search || {});
     o.settings.github = Object.assign(d.settings.github, (o.settings || {}).github || {});
@@ -209,7 +214,43 @@ function load() {
     return o;
   } catch (e) { return defaultState(); }
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+/* ------------------------- 存储适配层 -------------------------
+ * 所有本地读写都走 Store，便于以后换成 IndexedDB / Tauri 文件系统。
+ * 原实现把写入异常静默吞掉：一旦超出配额，用户会在毫无提示的情况下丢数据。 */
+const Store = {
+  lastError: null,
+  isAvailable() {
+    try { const k = '__lucifer_probe__'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; }
+    catch (e) { return false; }
+  },
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) {
+    try { localStorage.setItem(k, v); Store.lastError = null; return true; }
+    catch (e) { Store.lastError = e; return false; }
+  },
+  del(k) { try { localStorage.removeItem(k); return true; } catch (e) { return false; } },
+  /* 粗略估算占用字节（UTF-16 约 2 字节/字符） */
+  usage() {
+    try {
+      let n = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        n += (k.length + (Store.get(k) || '').length) * 2;
+      }
+      return n;
+    } catch (e) { return 0; }
+  },
+};
+let SAVE_WARNED = false;
+function save() {
+  const ok = Store.set(KEY, JSON.stringify(S));
+  if (!ok && !SAVE_WARNED) {
+    SAVE_WARNED = true;
+    const reason = (Store.lastError && (Store.lastError.name || Store.lastError.message)) || '未知错误';
+    toast('⚠️ 本地保存失败：' + reason + '（可能超出存储配额）。请到「设置 → 上下文与数据」导出备份并清理旧会话。', 'err');
+  }
+  return ok;
+}
 
 const getAgent = (id) => S.agents.find((a) => a.id === id) || null;
 const mainAgent = () => S.agents.find((a) => a.isMain) || S.agents[0];
@@ -491,10 +532,74 @@ function buildSystem(agent) {
     : '\n\n【可用工具】当前未启用任何工具（云沙盒 / 联网检索 / GitHub 均未配置或未开启）。');
   return parts.join('');
 }
+/* 上下文预算：中文约 1.6 字符/token，粗估够用（只用于闸门判断） */
+function estTokens(str) { return Math.ceil(String(str || '').length / 1.6); }
+
 function apiMessages(agent, topic, maxHist) {
   const sys = { role: 'system', content: buildSystem(agent) };
-  const hist = topic.messages.filter((m) => m.role === 'user' || m.role === 'assistant').slice(-(maxHist || 24));
-  return [sys].concat(hist.map((m) => ({ role: m.role, content: toApiContent(m) })));
+  const out = [sys];
+  /* 被压缩掉的旧轮次用摘要代替，UI 里的完整历史不受影响 */
+  if (topic && topic.summary) out.push({ role: 'system', content: '【更早对话的摘要（已压缩）】\n' + topic.summary });
+  const hist = topic.messages
+    .filter((m) => (m.role === 'user' || m.role === 'assistant') && !m.compacted)
+    .slice(-(maxHist || 24));
+  return out.concat(hist.map((m) => ({ role: m.role, content: toApiContent(m) })));
+}
+
+function topicTokens(agent, topic) {
+  let n = estTokens(buildSystem(agent)) + 8;
+  if (topic.summary) n += estTokens(topic.summary);
+  for (const m of topic.messages) {
+    if (m.role !== 'user' && m.role !== 'assistant') continue;
+    if (m.compacted) continue;
+    n += estTokens(toApiContent(m)) + 8;
+  }
+  return n;
+}
+
+/* 接近预算就把最旧的轮次交给模型压成摘要，并标记为已压缩（只影响下发给 API 的内容） */
+async function compactTopic(agent, topic) {
+  const cx = S.settings.ctx || (S.settings.ctx = { autoCompact: true, tokenBudget: 24000, keepMessages: 12 });
+  if (cx.autoCompact === false) return false;
+  const budget = Math.max(4000, Number(cx.tokenBudget) || 24000);
+  if (topicTokens(agent, topic) < budget * 0.75) return false;
+  const keep = Math.max(4, Number(cx.keepMessages) || 12);
+  const older = topic.messages.filter((m) => (m.role === 'user' || m.role === 'assistant') && !m.compacted);
+  if (older.length <= keep + 2) return false;
+  const cut = older.slice(0, older.length - keep);
+  const prev = topic.summary ? '【已有摘要】\n' + topic.summary + '\n\n' : '';
+  const body = cut.map((m) => (m.role === 'user' ? '用户：' : '助手：') + String(m.content || '').slice(0, 1500)).join('\n\n');
+  const sys = { role: 'system', content:
+    '你是上下文压缩器。把给定对话压成一份供后续推理继续使用的摘要，必须保留：目标任务、已达成的结论、关键事实与数据（含数字、路径、ID）、未完成事项、用户的偏好与约束。删掉寒暄、过程叙述与重复内容。只输出摘要正文，不要客套。' };
+  try {
+    let acc = '';
+    await streamChat(agent, [sys, { role: 'user', content: (prev + body).slice(0, 24000) }],
+      (c) => { acc += c; }, ABORT ? ABORT.signal : undefined, null);
+    if (!acc.trim()) return false;
+    topic.summary = acc.trim();
+    topic.summarizedCount = (topic.summarizedCount || 0) + cut.length;
+    topic.compactedAt = now();
+    cut.forEach((m) => { m.compacted = true; });
+    save();
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ------------------------- 子 Agent 回执 ------------------------- */
+/* 子 Agent 的价值是「上下文隔离」：给它独立的小上下文，只回传结论 */
+const RECEIPT_RULE = '\n\n【回执要求】你的输出会被回传给主控 Agent，请直接给结论：'
+  + '① 结论（做了什么、结果如何）② 产物（文档标题 / 文件路径 / 关键数据）③ 引用来源。'
+  + '不要复述思考过程，不要寒暄，不要重复任务描述。';
+function buildReceipt(target, raw) {
+  const txt = String(raw || '').trim();
+  const limit = Math.max(300, Number((S.settings || {}).receiptLimit) || 1200);
+  const docs = []; const re = /<doc[^>]*\btitle\s*=\s*["']([^"']+)["']/g;
+  let m; while ((m = re.exec(txt))) docs.push(m[1]);
+  const body = txt.length > limit
+    ? txt.slice(0, limit) + '\n…（回执已截断，原始 ' + txt.length + ' 字）'
+    : txt;
+  return '【' + target.name + ' @' + target.roleName + ' 的回执】\n' + body
+    + (docs.length ? '\n· 本次产出文档：' + Array.from(new Set(docs)).join('、') : '');
 }
 
 /* ------------------------- 文档操作 ------------------------- */

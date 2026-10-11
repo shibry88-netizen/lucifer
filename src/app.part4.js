@@ -3,7 +3,7 @@
  * 云沙盒工具 / 联网检索 / 会话 ZIP 导出 / 图片与文件 / GitHub 集成
  * ===================================================================== */
 
-const TOOL_VERSION = 'v2.0';
+const TOOL_VERSION = 'v3.0';
 
 /* ------------------------- 附件 ------------------------- */
 const readAsDataURL = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });

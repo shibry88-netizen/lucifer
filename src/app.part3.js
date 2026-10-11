@@ -3,7 +3,7 @@
  * 主题引擎 / 会话列表 / 全文检索 / 对话内文档浏览 / 云沙盒 / 移动端
  * ===================================================================== */
 
-const VERSION = 'v2.0';
+const VERSION = 'v3.0';
 const STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
   '<defs><linearGradient id="starG" x1="3" y1="2" x2="21" y2="22">' +
   '<stop offset="0" stop-color="#8C6E33"/><stop offset=".5" stop-color="#E7D4A4"/><stop offset="1" stop-color="#A8823D"/>' +

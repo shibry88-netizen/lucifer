@@ -324,6 +324,8 @@ async function runTurn(userText) {
   const maxRounds = S.settings.maxRounds || 6;
   try {
     for (let round = 1; round <= maxRounds; round++) {
+      // 上下文预算：接近上限先把旧轮次压成摘要，避免爆窗后整个会话作废
+      await compactTopic(agent, topic);
       // 先取上下文（此时不含本轮的空占位），再落一条助手消息占位
       const msgs = apiMessages(agent, topic);
       const msg = { role: 'assistant', content: '', ops: [], ts: now(), round, by: agent.id };
@@ -388,7 +390,10 @@ async function runTurn(userText) {
           scrollDown();
           /* 子 Agent 被主控调用时：前端不展示它的对话过程，只把结果回传给主控 */
           try {
-            const subMsgs = [{ role: 'system', content: buildSystem(target) }, { role: 'user', content: o.task }];
+            const subMsgs = [
+              { role: 'system', content: buildSystem(target) + RECEIPT_RULE },
+              { role: 'user', content: o.task },
+            ];
             let acc = '', subUsage = null;
             const t1 = now();
             const r = await streamChat(target, subMsgs, (c) => { acc += c; }, ABORT.signal, (u) => { subUsage = u; });
@@ -396,7 +401,7 @@ async function runTurn(userText) {
             o.result = stripDirectives(r); o.status = 'done';
             bumpStats(topic, target, subUsage, subMsgs, r, dt1);
             refreshBubble();
-            results.push('【' + target.name + ' @' + target.roleName + ' 的回执】\n' + o.result);
+            results.push(buildReceipt(target, o.result));
           } catch (e) {
             o.status = 'error'; o.result = '调用失败：' + (e.message || e);
             results.push('【' + target.name + ' 调用失败】' + (e.message || e));
@@ -571,6 +576,7 @@ function renderSettings() {
   const th = Object.assign({ mode: 'dark', preset: 'indigo', radius: 1, fontScale: 1, glassBlur: 22, aurora: true, custom: false }, S.settings.theme || {});
   const se = Object.assign({ provider: 'none', endpoint: '', enabled: false, count: 5, lastOk: 0 }, S.settings.search || {});
   const gh = Object.assign({ token: '', user: '', enabled: false, lastOk: 0 }, S.settings.github || {});
+  const cx = Object.assign({ autoCompact: true, tokenBudget: 24000, keepMessages: 12 }, S.settings.ctx || {});
   $('#body').innerHTML =
   '<div class="scroll"><div class="page">' +
     '<h2>设置</h2>' +
@@ -624,7 +630,19 @@ function renderSettings() {
         '<span class="kv">' + (sb.lastOk ? '上次连通：' + relTime(sb.lastOk) : '尚未测试连通') + '</span></div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>③ 主题外观</h3>' +
+    '<div class="card glass"><h3>③ 上下文与数据</h3>' +
+      '<div class="fld"><label>上下文预算（tokens）—— 超出即自动把旧轮次压成摘要</label>' +
+        '<input id="ctxBudget" type="number" min="4000" step="1000" value="' + (cx.tokenBudget || 24000) + '"></div>' +
+      '<div class="fld"><label>压缩后保留的最近消息条数</label>' +
+        '<input id="ctxKeep" type="number" min="4" max="60" value="' + (cx.keepMessages || 12) + '"></div>' +
+      '<div class="fld"><label>子 Agent 回执字数上限（超出即截断）</label>' +
+        '<input id="ctxReceipt" type="number" min="300" max="6000" step="100" value="' + (S.settings.receiptLimit || 1200) + '"></div>' +
+      '<div class="kv" style="padding:6px 0"><span class="k">本地存储占用</span><span class="v">' +
+        (Store.usage() / 1024).toFixed(1) + ' KB' + (Store.isAvailable() ? '' : '（不可用！）') + '</span></div>' +
+      '<div class="hint2">自动压缩已开启：压缩只影响下发给模型的内容，界面里的完整历史不会丢。</div>' +
+    '</div>' +
+
+    '<div class="card glass"><h3>④ 主题外观</h3>' +
       '<div class="switch"><div><div class="lbl">配色模式</div><div class="dsc">暗金（默认）/ 亮白 / 跟随系统</div></div>' +
         '<div class="chips" style="margin:0">' + [['dark','暗金'],['light','亮白'],['auto','跟随系统']].map(([k, n]) =>
           '<span class="chip' + ((th.mode === k) ? ' on' : '') + '" data-theme-mode="' + k + '">' + n + '</span>').join('') + '</div>' +
@@ -642,7 +660,7 @@ function renderSettings() {
       '<div class="row mt"><button class="btn fix" data-act="resetTheme">恢复默认外观</button></div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>④ 联网检索</h3>' +
+    '<div class="card glass"><h3>⑤ 联网检索</h3>' +
       '<div class="fld"><label>检索服务商</label><select id="seProvider">' +
         [['none', '不启用'], ['searxng', 'SearXNG（自建实例 · 免费）'], ['tavily', 'Tavily API'], ['brave', 'Brave Search API'], ['serper', 'Serper (Google)']]
           .map(([k, n]) => '<option value="' + k + '"' + (se.provider === k ? ' selected' : '') + '>' + n + '</option>').join('') +
@@ -655,7 +673,7 @@ function renderSettings() {
         '<span class="kv">' + (se.lastOk ? '上次成功：' + relTime(se.lastOk) : '尚未测试') + '</span></div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>⑤ GitHub</h3>' +
+    '<div class="card glass"><h3>⑥ GitHub</h3>' +
       '<div class="fld"><label>Personal Access Token</label><input id="ghToken" type="password" value="' + esc(gh.token) + '" placeholder="ghp_… / github_pat_…"></div>' +
       '<div class="switch"><div><div class="lbl">启用 GitHub 工具</div><div class="dsc">Agent 可创建仓库、提交文件、读取代码、触发 CI</div></div>' +
         '<div class="tgl' + (gh.enabled ? ' on' : '') + '" data-tgl-gh="1"></div></div>' +
@@ -665,7 +683,7 @@ function renderSettings() {
       '<div class="hint2 mt">Token 仅存本机 localStorage。需要权限：<code>repo</code>（读写仓库）、<code>workflow</code>（触发 / 查看 Actions）。</div>' +
     '</div>' +
 
-    '<div class="card glass"><h3>⑥ 数据</h3>' +
+    '<div class="card glass"><h3>⑦ 数据</h3>' +
       '<div class="sub" style="margin:0 0 12px">Agent ' + S.agents.length + ' 个 · 文档 ' + S.docs.length + ' 篇 · 会话 ' + S.topics.length + ' 个</div>' +
       '<div class="row">' +
         '<button class="btn fix" data-act="exportData">导出全部数据 (JSON)</button>' +
@@ -680,7 +698,7 @@ function renderSettings() {
   if (sbm) sbm.addEventListener('change', () => { persistCfg(); save(); renderSettings(); });
   const pick = $('#cfgPick');
   if (pick) pick.addEventListener('change', () => { persistCfg(); S.settings.activeProviderId = pick.value; save(); renderSettings(); });
-  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#sbProvider', '#sbEndpoint', '#sbExecPath', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
+  ['#cfgName', '#cfgUrl', '#cfgKey', '#cfgDefault', '#cfgRounds', '#ctxBudget', '#ctxKeep', '#ctxReceipt', '#sbProvider', '#sbEndpoint', '#sbExecPath', '#sbKey', '#seProvider', '#seEndpoint', '#seCount', '#ghToken'].forEach((sel) => {
     const e = $(sel); if (e) e.addEventListener('change', () => { persistCfg(); save(); });
   });
 }
@@ -701,6 +719,10 @@ function persistCfg() {
   if ($('#seCount')) se.count = Math.max(1, Math.min(20, parseInt($('#seCount').value, 10) || 5));
   const ghc = S.settings.github || (S.settings.github = {});
   if ($('#ghToken')) ghc.token = $('#ghToken').value.trim();
+  const cxx = S.settings.ctx || (S.settings.ctx = {});
+  if ($('#ctxBudget')) cxx.tokenBudget = Math.max(4000, parseInt($('#ctxBudget').value, 10) || 24000);
+  if ($('#ctxKeep')) cxx.keepMessages = Math.max(4, Math.min(60, parseInt($('#ctxKeep').value, 10) || 12));
+  if ($('#ctxReceipt')) S.settings.receiptLimit = Math.max(300, Math.min(6000, parseInt($('#ctxReceipt').value, 10) || 1200));
   const sb = S.settings.sandbox;
   if ($('#sbMode')) sb.mode = $('#sbMode').value;
   if ($('#sbProvider')) sb.provider = $('#sbProvider').value;
@@ -854,7 +876,7 @@ function wireGlobal() {
       fr.onload = () => {
         try {
           const o = JSON.parse(fr.result);
-          localStorage.setItem(KEY, JSON.stringify(o));
+          Store.set(KEY, JSON.stringify(o));
           S = load(); save(); renderShell();
           toast('导入成功', 'ok');
         } catch (x) { toast('导入失败：文件不是合法 JSON', 'err'); }
@@ -1179,7 +1201,7 @@ async function handleAct(act, e) {
         (m, close) => {
           m.addEventListener('click', (ev) => {
             const x = ev.target.closest('[data-x]'); if (!x) return;
-            if (x.dataset.x === 'ok') { localStorage.removeItem(KEY); S = defaultState(); save(); renderShell(); toast('已重置', 'ok'); }
+            if (x.dataset.x === 'ok') { Store.del(KEY); S = defaultState(); save(); renderShell(); toast('已重置', 'ok'); }
             close();
           });
         });
