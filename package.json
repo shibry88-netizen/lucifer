@@ -1,7 +1,7 @@
 {
   "name": "lucifer-chenxing",
   "productName": "LUCIFER",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "LUCIFER —— 多智能体中枢",
   "private": true,
   "type": "module",
@@ -54,5 +54,6 @@
       "shortcutName": "LUCIFER"
     }
   },
-  "main": "electron/main.js"
+  "main": "electron/main.js",
+  "author": "shibry88-netizen"
 }

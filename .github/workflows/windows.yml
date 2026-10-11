@@ -1,0 +1,98 @@
+name: Windows 桌面端
+
+# 手动触发，或桌面端 / 前端源码变更时自动跑
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src-tauri/**'
+      - 'src/**'
+      - 'index.html'
+      - 'build.mjs'
+      - 'dist.mjs'
+      - 'icon-512.png'
+      - 'electron/**'
+      - 'package.json'
+      - '.github/workflows/windows.yml'
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------- 主方案：Tauri（走系统 WebView2，安装包体积小） ----------
+  tauri:
+    name: Tauri 安装包（主）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 准备 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 准备 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 缓存 Rust 依赖
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: 安装 Tauri CLI
+        run: npm install -g @tauri-apps/cli@^2
+
+      - name: 内联构建前端（src → index.html → dist/）
+        run: npm run dist
+
+      - name: 打包 nsis + msi
+        run: tauri build
+
+      - name: 汇总产物
+        shell: bash
+        run: |
+          mkdir -p out
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe out/ 2>/dev/null || true
+          cp src-tauri/target/release/bundle/msi/*.msi        out/ 2>/dev/null || true
+          cp src-tauri/target/release/LUCIFER.exe             out/ 2>/dev/null || true
+          echo "--- 产物 ---"
+          ls -la out
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: LUCIFER-windows-tauri
+          path: out/*
+          if-no-files-found: error
+          retention-days: 30
+
+  # ---------- 备选：Electron（webSecurity 关闭，第三方 API 直连更稳） ----------
+  electron:
+    name: Electron 安装包（备选）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 准备 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        run: npm install --no-audit --no-fund
+
+      - name: 内联构建前端
+        run: npm run dist
+
+      - name: 打包 nsis（不发布）
+        run: npx electron-builder --win nsis --publish never
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: LUCIFER-windows-electron
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 30

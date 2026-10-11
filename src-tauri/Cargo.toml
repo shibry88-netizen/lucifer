@@ -1,6 +1,6 @@
 [package]
 name = "chenxing"
-version = "1.0.0"
+version = "3.0.0"
 description = "晨星 · LUCIFER 多智能体中枢"
 authors = ["shibry88-netizen"]
 edition = "2021"
